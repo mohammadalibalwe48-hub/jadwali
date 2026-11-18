@@ -252,6 +252,7 @@ export function App() {
         if (event.target.files?.length) void handleScanFiles(Array.from(event.target.files));
         event.target.value = '';
       }} />
+      <div className="workspace-backdrop" aria-hidden="true" />
       <WorkspaceNavigation onTool={openTool} onSchedule={onSchedule} />
       <main id="workspace-content" className="workspace-content" tabIndex={-1}>
         <div className="workspace-masthead">
@@ -282,12 +283,12 @@ export function App() {
           <Loader2 size={19} className="animate-spin" aria-hidden="true" /><span>جارٍ قراءة الجدول. ستظهر المحاضرات للمراجعة.</span>
         </div>}
 
-        {hasSchedule ? <>
+        {hasSchedule ? <div className="workspace-grid">
           <NextClass sessions={sessions} />
           <ScheduleBoard groups={groups} today={today} selectedDay={selectedDay} onDay={setSelectedDay}
             view={viewMode} onView={setViewMode} onNew={onNew}
             onEdit={(session) => { setEditingSession(session); setIsEditorOpen(true); }} />
-        </> : <section className="workspace-empty" aria-labelledby="empty-title" onDragOver={(event) => event.preventDefault()}
+        </div> : <section className="workspace-empty" aria-labelledby="empty-title" onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => {
               event.preventDefault();
               void handleScanFiles(Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')));
@@ -307,15 +308,6 @@ export function App() {
             <button className="empty-restore" type="button" onClick={(event) => openTool('backup', event.currentTarget)}>
               استعادة جدول من جهاز آخر
             </button>
-          </div>
-          <div className="import-illustration" aria-hidden="true">
-            <div className="import-sheet">
-              <div className="import-sheet-heading"><i /><i /></div>
-              <div className="import-sheet-grid">
-                {Array.from({ length: 24 }, (_, index) => <i key={index} />)}
-              </div>
-            </div>
-            <div className="import-scan-frame"><i /><i /><i /><i /></div>
           </div>
         </section>}
       </main>

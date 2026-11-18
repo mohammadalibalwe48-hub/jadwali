@@ -29,7 +29,7 @@ export function WorkspaceNavigation({ onTool, onSchedule }: NavigationProps) {
     <header className="workspace-header">
       <div className="workspace-header-inner">
         <button className="workspace-brand" type="button" onClick={onSchedule} aria-label="جدولي، الصفحة الرئيسية">
-          <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
+          <span className="brand-mark"><CalendarRange size={19} aria-hidden="true" /></span>
           <span>جدولي</span>
         </button>
         <nav className="workspace-nav" aria-label="التنقّل الرئيسي">
@@ -39,7 +39,7 @@ export function WorkspaceNavigation({ onTool, onSchedule }: NavigationProps) {
           <button type="button" className="workspace-nav-item nav-export" aria-label="التصدير" aria-haspopup="dialog"
             onClick={(event) => onTool('export', event.currentTarget)}><Download size={17} aria-hidden="true" />التصدير</button>
           <button type="button" className="workspace-nav-item nav-more" aria-label="المزيد" aria-haspopup="dialog"
-            onClick={(event) => onTool('more', event.currentTarget)}><MoreHorizontal size={21} aria-hidden="true" /></button>
+            onClick={(event) => onTool('more', event.currentTarget)}><MoreHorizontal size={21} aria-hidden="true" /><span>المزيد</span></button>
         </nav>
       </div>
     </header>
