@@ -55,7 +55,36 @@ try {
 
   answer = { ...answer, sessions: [{ ...answer.sessions[0], startTime: '13:00' }] };
   assert.deepEqual(await post(input, 'test-only').then((response) => response.json()), { sessions: [], issues: ['cropped'] });
-  console.log('Vision API passed with a mock Ollama service.');
+  const gatewayInput = { ...input, mode: 'gateway' };
+  const expected = {
+    sessions: [{ ...answer.sessions[0], startTime: '08:30' }],
+    issues: [],
+  };
+  let gatewayOutput = [expected];
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = (url, options) => {
+      if (String(url) !== 'https://ai-gateway.vercel.sh/v3/ai/language-model') return originalFetch(url, options);
+      assert.equal(new Headers(options.headers).get('ai-language-model-id'), 'alibaba/qwen3.7-flash');
+      assert.equal(JSON.parse(options.body).providerOptions.alibaba.enableThinking, false);
+      return Promise.resolve(Response.json({
+        content: [{ type: 'text', text: JSON.stringify(gatewayOutput) }],
+        finishReason: { unified: 'stop', raw: 'stop' },
+        usage: { inputTokens: { total: 20 }, outputTokens: { total: 10 } },
+      }));
+    };
+
+    const qwen = await post(gatewayInput, 'test-only');
+    assert.equal(qwen.status, 200);
+    assert.deepEqual(await qwen.json(), expected);
+    gatewayOutput = [{ ...expected, issues: ['ambiguous_join'] }];
+    const ambiguous = await post(gatewayInput, 'test-only');
+    assert.equal(ambiguous.status, 200);
+    assert.deepEqual(await ambiguous.json(), { sessions: [], issues: ['ambiguous_join'] });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  console.log('Vision API passed with mock Ollama and Qwen responses.');
 } finally {
   await vite.close();
   await rm(cacheDir, { recursive: true, force: true });
