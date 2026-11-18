@@ -32,6 +32,15 @@ export interface LectureSession {
   floorAuto: boolean;
 }
 
+type MeetingIdentity = Pick<LectureSession, 'startTime' | 'endTime' | 'courseName' | 'courseCode' | 'room'> & {
+  day: string;
+};
+
+export function isSameMeeting(a: MeetingIdentity, b: MeetingIdentity): boolean {
+  return a.day === b.day && a.startTime === b.startTime && a.endTime === b.endTime && a.room === b.room &&
+    (a.courseCode && b.courseCode ? a.courseCode === b.courseCode : a.courseName === b.courseName);
+}
+
 export interface FloorRule {
   id: string;
   prefix: string;

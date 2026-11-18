@@ -1,3 +1,5 @@
+import { isSameMeeting } from '../types';
+
 export interface OcrWord {
   text: string;
   x: number;
@@ -174,6 +176,10 @@ const KNOWN_COURSE_MAP: Array<{
   },
 ];
 
+export function courseNameForCode(code: string | undefined): string | undefined {
+  return KNOWN_COURSE_MAP.find((entry) => entry.code && entry.code === code)?.canonical('');
+}
+
 function to24h(hStr: string, mStr: string, rawContext = ''): string {
   let h = parseInt(hStr, 10);
   const m = mStr.padStart(2, '0');
@@ -188,9 +194,12 @@ function add90Min(hhmm: string): string {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
-function normalizeAsciiDigits(str: string): string {
-  return str
-    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+export function normalizeArabicDigits(text: string): string {
+  return text.replace(/[٠-٩۰-۹]/g, (digit) => String(digit.charCodeAt(0) & 15));
+}
+
+export function normalizeAsciiDigits(str: string): string {
+  return normalizeArabicDigits(str)
     .replace(/(\d)\s*[Oo]/g, '$10')
     .replace(/[Oo]\s*(\d)/g, '0$1')
     .replace(/:\s*[Oo]{2}\b/g, ':00');
@@ -387,7 +396,7 @@ function clusterWordsIntoRows(words: OcrWord[], rowTol: number): OcrWord[][] {
 }
 
 export function parseScheduleFromOcr(payloads: OcrPagePayload[]): ParsedRawSession[] {
-  const allResults: ParsedRawSession[] = [];
+  const allResults: Array<ParsedRawSession & { _explicit?: boolean }> = [];
 
   for (const payload of payloads) {
     const {
@@ -463,7 +472,7 @@ export function parseScheduleFromOcr(payloads: OcrPagePayload[]): ParsedRawSessi
       while ((m = rangeRegex.exec(joined)) !== null) {
         const h1 = parseInt(m[1], 10);
         const h2 = parseInt(m[3], 10);
-        if (h1 > 23 || h2 > 23) continue;
+        if (h1 > 23 || h2 > 23 || Number(m[2]) > 59 || Number(m[4]) > 59) continue;
 
         const wStart = charWordMap[m.index] || rowWords[0];
         const wEnd =
@@ -495,7 +504,7 @@ export function parseScheduleFromOcr(payloads: OcrPagePayload[]): ParsedRawSessi
         let sm: RegExpExecArray | null;
         while ((sm = singleRegex.exec(joined)) !== null) {
           const hh = parseInt(sm[1], 10);
-          if (hh < 1 || hh > 21) continue;
+          if (hh < 1 || hh > 21 || Number(sm[2]) > 59) continue;
           const w = charWordMap[sm.index] || rowWords[0];
           const start = to24h(sm[1], sm[2], joined);
           const end = add90Min(start);
@@ -511,6 +520,8 @@ export function parseScheduleFromOcr(payloads: OcrPagePayload[]): ParsedRawSessi
         }
       }
     }
+
+    if (!dayAnchors.length || !timeAnchors.length) continue;
 
     // 3. Room Anchors (handles S-OIB, $-01B, S018, 5-07, 8-06, المدرّج, المددج, المدتج!)
     const roomAnchors: RoomAnchor[] = [];
@@ -755,7 +766,7 @@ export function parseScheduleFromOcr(payloads: OcrPagePayload[]): ParsedRawSessi
         }
 
         const explicitCue = Boolean(rm.hintedType || typeHint || colorBadgeHint);
-        (allResults as Array<ParsedRawSession & { _explicit?: boolean }>).push({
+        allResults.push({
           day: bestDay,
           startTime,
           endTime,
@@ -795,20 +806,7 @@ export function parseScheduleFromOcr(payloads: OcrPagePayload[]): ParsedRawSessi
     }
   }
 
-  const deduped: Array<ParsedRawSession & { _explicit?: boolean }> = [];
-  for (const item of allResults as Array<ParsedRawSession & { _explicit?: boolean }>) {
-    if (
-      !deduped.some(
-        (d) =>
-          d.day === item.day &&
-          d.startTime === item.startTime &&
-          d.room === item.room
-      )
-    ) {
-      deduped.push(item);
-    }
-  }
-
+  const deduped = distinctMeetings(allResults);
   const byCourse = new Map<string, Array<ParsedRawSession & { _explicit?: boolean }>>();
   for (const s of deduped) {
     const list = byCourse.get(s.courseName) || [];
@@ -826,5 +824,13 @@ export function parseScheduleFromOcr(payloads: OcrPagePayload[]): ParsedRawSessi
     }
   }
 
-  return deduped.map(({ _explicit, ...rest }) => rest);
+  return deduped.map(({ _explicit, ...session }) => session);
+}
+
+export function distinctMeetings<T extends ParsedRawSession>(sessions: T[]): T[] {
+  const distinct: T[] = [];
+  for (const session of sessions) {
+    if (!distinct.some((other) => isSameMeeting(session, other))) distinct.push(session);
+  }
+  return distinct;
 }

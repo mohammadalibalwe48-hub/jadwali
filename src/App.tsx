@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import {
   DAYS_ORDER,
+  isSameMeeting,
   type DayOfWeek,
   type FloorRule,
   type LectureSession,
@@ -87,6 +88,7 @@ export function App() {
   const [isFloorOpen, setIsFloorOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  const scanInProgress = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -113,7 +115,8 @@ export function App() {
   });
 
   const handleScanFiles = async (files: File[]) => {
-    if (!files.length || isScanning) return;
+    if (!files.length || scanInProgress.current) return;
+    scanInProgress.current = true;
     setIsScanning(true);
     setStatusToast(null);
     setReadyPdf(null);
@@ -133,13 +136,7 @@ export function App() {
         const combined = [...prev];
         let added = 0;
         for (const incoming of result.sessions) {
-          const dup = combined.some(
-            (c) =>
-              c.day === incoming.day &&
-              c.startTime === incoming.startTime &&
-              c.room === incoming.room
-          );
-          if (!dup) {
+          if (!combined.some((other) => isSameMeeting(other, incoming))) {
             combined.push(incoming);
             added++;
           }
@@ -154,7 +151,7 @@ export function App() {
           kind: 'info',
           text:
             prev.length === 0
-              ? `تم استخراج ${result.sessions.length} محاضرات مع الطوابق.`
+              ? `تم استخراج ${result.sessions.length} محاضرات. راجع الأوقات والقاعات قبل التصدير.`
               : `تمت إضافة ${added} محاضرات جديدة للجدول.`,
         });
 
@@ -171,6 +168,7 @@ export function App() {
         text: err?.message || 'تعذّرت قراءة الصورة، حاول مرة ثانية.',
       });
     } finally {
+      scanInProgress.current = false;
       setIsScanning(false);
     }
   };
@@ -337,7 +335,7 @@ export function App() {
                 : 'bg-white border-[#E2DFD7] text-[#141413]'
             }`}
           >
-            <span>{statusToast.text}</span>
+            <span role={statusToast.kind === 'error' ? 'alert' : 'status'}>{statusToast.text}</span>
             <button
               type="button"
               onClick={() => setStatusToast(null)}
