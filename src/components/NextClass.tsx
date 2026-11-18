@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { CalendarClock, Clock3 } from 'lucide-react';
 import type { LectureSession } from '../types';
 import { nextMeeting } from '../utils/semester';
 
@@ -33,8 +32,8 @@ export function NextClass({ sessions }: { sessions: LectureSession[] }) {
     <section className="next-class" aria-labelledby="next-class-title">
       <div className="next-class-main">
         <div className="next-class-heading">
-          <h2 id="next-class-title"><CalendarClock size={16} aria-hidden="true" /> المحاضرة القادمة</h2>
-          <p className="next-class-countdown"><Clock3 size={13} aria-hidden="true" />{minutes > 0 ? `بعد ${countdown}` : 'تبدأ الآن'}</p>
+          <h2 id="next-class-title">المحاضرة القادمة</h2>
+          <p className="next-class-countdown">{minutes > 0 ? `بعد ${countdown}` : 'تبدأ الآن'}</p>
         </div>
         <p className="next-class-subject" dir="auto">{session.courseName}</p>
       </div>

@@ -1,5 +1,4 @@
-import { useId } from 'react';
-import { CalendarRange, ChevronLeft, LayoutList, Plus, Table2 } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import { DAYS_ORDER, type DayOfWeek, type LectureSession } from '../types';
 
 export type DayFilter = DayOfWeek | 'الكل';
@@ -24,8 +23,8 @@ function Course({ session }: { session: LectureSession }) {
     <span className="meeting-course">
       <strong dir="auto">{session.courseName}</strong>
       <span className="meeting-meta">
-        <span className="meeting-type" data-practical={session.type === 'عملي'}>{session.type}</span>
-        {session.courseCode && <bdi>{session.courseCode}</bdi>}
+        <span>{session.type}</span>
+        {session.courseCode && <><span aria-hidden="true">·</span><bdi>{session.courseCode}</bdi></>}
       </span>
     </span>
   );
@@ -45,27 +44,24 @@ export function ScheduleBoard({ groups, today, selectedDay, onDay, view, onView,
   onNew: () => void;
   onEdit: (session: LectureSession) => void;
 }) {
-  const countId = useId();
   const visible = groups.filter(({ day, meetings }) => (selectedDay === 'الكل' || selectedDay === day) && meetings.length);
   return (
     <section className="schedule-board" aria-labelledby="schedule-board-title">
       <div className="schedule-heading">
         <h2 id="schedule-board-title">الجدول الأسبوعي</h2>
         <div className="view-switch" role="group" aria-label="طريقة عرض المحاضرات">
-          <button className="view-option" type="button" aria-pressed={view === 'agenda'} onClick={() => onView('agenda')}><LayoutList size={15} aria-hidden="true" /> قائمة</button>
-          <button className="view-option" type="button" aria-pressed={view === 'table'} onClick={() => onView('table')}><Table2 size={14} aria-hidden="true" /> جدول</button>
+          <button className="view-option" type="button" aria-pressed={view === 'agenda'} onClick={() => onView('agenda')}>قائمة</button>
+          <button className="view-option" type="button" aria-pressed={view === 'table'} onClick={() => onView('table')}>جدول</button>
         </div>
       </div>
       <div className="week-selector" role="group" aria-label="أيام الجدول">
         <button className="week-day week-all" type="button" aria-pressed={selectedDay === 'الكل'} onClick={() => onDay('الكل')}>
-          <span>الأسبوع</span><CalendarRange size={15} aria-hidden="true" />
+          الأسبوع
         </button>
-        {groups.map(({ day, meetings }, index) => (
+        {groups.map(({ day }, index) => (
           <button type="button" className="week-day" key={day} aria-pressed={selectedDay === day}
-            aria-label={day} aria-describedby={`${countId}-${index}`} data-today={today === day} onClick={() => onDay(day)}>
+            aria-label={day} aria-current={today === day ? 'date' : undefined} onClick={() => onDay(day)}>
             <span className="day-full">{day}</span><span className="day-short">{daysShort[index]}</span>
-            <span className="week-count" aria-hidden="true" data-empty={meetings.length === 0}><bdi>{meetings.length}</bdi></span>
-            <span className="sr-only" id={`${countId}-${index}`}>عدد المحاضرات {meetings.length}</span>
           </button>
         ))}
       </div>
@@ -76,18 +72,21 @@ export function ScheduleBoard({ groups, today, selectedDay, onDay, view, onView,
         </div>
       ) : view === 'agenda' ? (
         <div className="agenda">
-          <div className="agenda-columns" aria-hidden="true"><span>الوقت</span><span>المحاضرة</span><span>القاعة</span></div>
           {visible.map(({ day, meetings }) => (
             <section key={day} className="agenda-day" data-today={today === day} aria-label={day}>
               <h3><span>{day}</span>{today === day && <span className="today-label">اليوم</span>}</h3>
-              {meetings.map((session) => (
-                <button className="meeting-row" type="button" key={session.id} onClick={() => onEdit(session)}>
-                  <MeetingTime session={session} />
-                  <Course session={session} />
-                  <Room session={session} />
-                  <ChevronLeft size={16} aria-hidden="true" className="meeting-arrow" />
-                </button>
-              ))}
+              <ul className="agenda-sessions">
+                {meetings.map((session) => (
+                  <li key={session.id}>
+                    <button className="meeting-row" type="button" onClick={() => onEdit(session)}>
+                      <MeetingTime session={session} />
+                      <Course session={session} />
+                      <Room session={session} />
+                      <Pencil size={15} strokeWidth={1.6} aria-hidden="true" className="meeting-edit" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </section>
           ))}
         </div>
