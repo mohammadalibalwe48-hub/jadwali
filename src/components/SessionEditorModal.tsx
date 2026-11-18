@@ -145,10 +145,10 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
                 type="button"
                 onClick={() => setDay(d)}
                 aria-pressed={day === d}
-                className={`py-2 rounded-xl text-xs font-semibold transition cursor-pointer active:scale-[0.97] ${
+                className={`py-2 rounded-md text-xs font-semibold transition cursor-pointer active:scale-[0.97] ${
                   day === d
                     ? 'bg-[var(--brand)] text-white'
-                    : 'bg-[var(--soft)] text-[var(--muted)] hover:bg-[var(--lavender)]'
+                    : 'bg-[var(--soft)] text-[var(--muted)] hover:bg-[var(--hover)]'
                 }`}
               >
                 {d}
@@ -173,10 +173,10 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
                     setStartTime(slot.start);
                     setEndTime(slot.end);
                   }}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-mono-num font-semibold transition cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-md text-xs font-mono-num font-semibold transition cursor-pointer ${
                     isSelected
                       ? 'bg-[var(--brand)] text-white'
-                      : 'bg-[var(--soft)] text-[var(--muted)] hover:bg-[var(--lavender)]'
+                      : 'bg-[var(--soft)] text-[var(--muted)] hover:bg-[var(--hover)]'
                   }`}
                 >
                   {slot.label}
@@ -186,13 +186,13 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="bg-[var(--soft)] border border-[var(--line)] rounded-xl p-2.5">
+            <div className="bg-[var(--soft)] border border-[var(--line)] rounded-md p-2.5">
               <span className="block text-[11px] font-medium text-[var(--muted)] mb-1">البداية</span>
               <div className="flex items-center gap-1.5" dir="ltr">
                 <select
                   value={startH} aria-label="ساعة البداية"
                   onChange={(e) => setStartTime(`${e.target.value}:${startM}`)}
-                  className="flex-1 bg-white border border-[var(--line)] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                  className="flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
                 >
                   {HOURS.map((h) => (
                     <option key={h} value={h}>
@@ -204,7 +204,7 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
                 <select
                   value={startM} aria-label="دقيقة البداية"
                   onChange={(e) => setStartTime(`${startH}:${e.target.value}`)}
-                  className="flex-1 bg-white border border-[var(--line)] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                  className="flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
                 >
                   {MINUTES.map((m) => (
                     <option key={m} value={m}>
@@ -215,13 +215,13 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
               </div>
             </div>
 
-            <div className="bg-[var(--soft)] border border-[var(--line)] rounded-xl p-2.5">
+            <div className="bg-[var(--soft)] border border-[var(--line)] rounded-md p-2.5">
               <span className="block text-[11px] font-medium text-[var(--muted)] mb-1">النهاية</span>
               <div className="flex items-center gap-1.5" dir="ltr">
                 <select
                   value={endH} aria-label="ساعة النهاية"
                   onChange={(e) => setEndTime(`${e.target.value}:${endM}`)}
-                  className="flex-1 bg-white border border-[var(--line)] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                  className="flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
                 >
                   {HOURS.map((h) => (
                     <option key={h} value={h}>
@@ -233,7 +233,7 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
                 <select
                   value={endM} aria-label="دقيقة النهاية"
                   onChange={(e) => setEndTime(`${endH}:${e.target.value}`)}
-                  className="flex-1 bg-white border border-[var(--line)] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                  className="flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
                 >
                   {MINUTES.map((m) => (
                     <option key={m} value={m}>
@@ -250,16 +250,16 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <div>
             <p id="editor-type" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">النوع</p>
-            <div className="grid grid-cols-2 gap-1.5 bg-[var(--soft)] p-1 rounded-xl" role="group" aria-labelledby="editor-type">
+            <div className="grid grid-cols-2 gap-1.5 bg-[var(--soft)] p-1 rounded-md" role="group" aria-labelledby="editor-type">
               {(['نظري', 'عملي'] as SessionType[]).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setType(t)}
                   aria-pressed={type === t}
-                  className={`py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  className={`py-2 rounded-md text-xs font-bold transition cursor-pointer ${
                     type === t
-                      ? 'bg-white text-[var(--ink)] shadow-2xs'
+                      ? 'bg-white text-[var(--ink)]'
                       : 'text-[var(--muted)] hover:text-[var(--ink)]'
                   }`}
                 >

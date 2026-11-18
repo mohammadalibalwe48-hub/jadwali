@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, CheckCircle2, Cloud, ImagePlus, Loader2, Plus, ScanLine, X } from 'lucide-react';
+import { CheckCircle2, Loader2, Plus, ScanLine, X } from 'lucide-react';
 import {
   DAYS_ORDER,
   isSameMeeting,
@@ -25,9 +25,9 @@ import { useBackupSync } from './services/useBackupSync';
 import type { ScheduleBackup } from './services/backup';
 import { EMPTY_ATTENDANCE, type Attendance } from './utils/attendance';
 
-import { JadwaliBrand, WorkspaceMenu, WorkspaceNavigation, type WorkspaceTool } from './components/WorkspaceNavigation';
-import { ScheduleBoard, WeekOverview, weekGroups, type DayFilter } from './components/ScheduleBoard';
-import { scheduleDay } from './utils/semester';
+import { WorkspaceMenu, WorkspaceNavigation, type WorkspaceTool } from './components/WorkspaceNavigation';
+import { ScheduleBoard, weekGroups, type DayFilter } from './components/ScheduleBoard';
+import { localDate, scheduleDay } from './utils/semester';
 
 const ATTENDANCE_KEY = 'jadwali_attendance_v1';
 const dateFormat = new Intl.DateTimeFormat('ar-SY', { weekday: 'long', day: 'numeric', month: 'long', numberingSystem: 'latn' });
@@ -253,72 +253,64 @@ export function App() {
         event.target.value = '';
       }} />
       <WorkspaceNavigation onTool={openTool} onSchedule={onSchedule} />
-      <div className="workspace-main">
-        <header className="workspace-header">
-          <div className="workspace-header-inner">
-            <div className="header-brand"><JadwaliBrand onSchedule={onSchedule} /></div>
-            <div className="header-location"><CalendarDays size={18} aria-hidden="true" /> الجدول</div>
-            {hasSchedule && <div className="header-actions">
-              <button className="button button-secondary header-add" type="button" aria-label="إضافة محاضرة" onClick={onNew}>
-                <Plus size={19} aria-hidden="true" /><span>إضافة محاضرة</span>
-              </button>
-              <button className="button button-primary" type="button" disabled={isScanning} onClick={onUpload}>
-                {isScanning ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <ScanLine size={17} aria-hidden="true" />}
-                {isScanning ? 'جارٍ الاستيراد…' : 'استيراد صورة'}
-              </button>
-            </div>}
-          </div>
-        </header>
-        <main id="workspace-content" className="workspace-content" tabIndex={-1}>
+      <main id="workspace-content" className="workspace-content" tabIndex={-1}>
+        <div className="workspace-masthead">
           <div className="workspace-title">
-            <p className="workspace-date"><CalendarDays size={16} aria-hidden="true" /> {dateFormat.format(now)}</p>
-            <h1>{metadata.title.trim() && metadata.title !== DEFAULT_META.title ? metadata.title : 'جدولي الدراسي'}</h1>
+            <time className="workspace-date" dateTime={localDate(now)}>{dateFormat.format(now)}</time>
+            <h1>{metadata.title.trim() && metadata.title !== DEFAULT_META.title ? metadata.title : 'جدول المحاضرات'}</h1>
             {metadata.subtitle.trim() && <p className="workspace-subtitle" dir="auto">{metadata.subtitle}</p>}
             {hasSchedule && metadata.semester.trim() && <p className="workspace-semester">
               {metadata.semester.split(/(\d{4}\s*\/\s*\d{4})/).map((part, index) => index % 2 ? <bdi key={index} dir="ltr">{part}</bdi> : part)}
             </p>}
           </div>
-
-          {statusToast && <div role="status" className="workspace-status">
-            <CheckCircle2 size={19} aria-hidden="true" /><span>{statusToast}</span>
-            <button className="icon-button" type="button" aria-label="إغلاق التنبيه" onClick={() => setStatusToast(null)}><X size={17} /></button>
+          {hasSchedule && <div className="schedule-actions">
+            <button className="button button-secondary" type="button" onClick={onNew}>
+              <Plus size={17} aria-hidden="true" />إضافة محاضرة
+            </button>
+            <button className="button button-primary" type="button" disabled={isScanning} onClick={onUpload}>
+              {isScanning ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <ScanLine size={17} aria-hidden="true" />}
+              {isScanning ? 'جارٍ الاستيراد…' : 'استيراد صورة'}
+            </button>
           </div>}
-          {isScanning && hasSchedule && !scan && <div role="status" className="workspace-status">
-            <Loader2 size={19} className="animate-spin" aria-hidden="true" /><span>جارٍ قراءة الجدول. ستظهر المحاضرات للمراجعة.</span>
-          </div>}
+        </div>
 
-          {hasSchedule ? <div className="schedule-layout">
-            <NextClass sessions={sessions} />
-            <ScheduleBoard groups={groups} today={today} selectedDay={selectedDay} onDay={setSelectedDay}
-              view={viewMode} onView={setViewMode} onNew={onNew}
-              onEdit={(session) => { setEditingSession(session); setIsEditorOpen(true); }} />
-            <WeekOverview groups={groups} today={today} />
-          </div> : <section className="workspace-empty surface" aria-labelledby="empty-title" onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault();
-                void handleScanFiles(Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')));
-              }}>
-            <div className="workspace-empty-content">
-              <span className="empty-mark"><ImagePlus size={26} aria-hidden="true" /></span>
-              <h2 id="empty-title">أضف جدول محاضراتك</h2>
-              <p>ارفع صورة أو لقطة شاشة لجدولك، ثم راجع المحاضرات المستخرجة واحفظها.</p>
-              <div className="empty-actions">
-                <button className="button button-primary" type="button" disabled={isScanning} onClick={onUpload}>
-                  {isScanning ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <ScanLine size={18} aria-hidden="true" />}
-                  <span role={isScanning ? 'status' : undefined}>{isScanning ? 'جارٍ قراءة الجدول…' : 'استيراد صورة'}</span>
-                </button>
-                <button className="button button-secondary" type="button" onClick={onNew}>
-                  <Plus size={18} aria-hidden="true" /> إضافة محاضرة
-                </button>
-              </div>
-              <button className="empty-restore" type="button" onClick={(event) => openTool('backup', event.currentTarget)}>
-                <Cloud size={17} aria-hidden="true" /> استعادة جدول من جهاز آخر
-              </button>
-            </div>
-            <div className="workspace-empty-photo" aria-hidden="true" />
-          </section>}
-        </main>
-      </div>
+        {statusToast && <div role="status" className="workspace-status">
+          <CheckCircle2 size={19} aria-hidden="true" /><span>{statusToast}</span>
+          <button className="icon-button" type="button" aria-label="إغلاق التنبيه" onClick={() => setStatusToast(null)}><X size={17} /></button>
+        </div>}
+        {isScanning && hasSchedule && !scan && <div role="status" className="workspace-status">
+          <Loader2 size={19} className="animate-spin" aria-hidden="true" /><span>جارٍ قراءة الجدول. ستظهر المحاضرات للمراجعة.</span>
+        </div>}
+
+        {hasSchedule ? <>
+          <NextClass sessions={sessions} />
+          <ScheduleBoard groups={groups} today={today} selectedDay={selectedDay} onDay={setSelectedDay}
+            view={viewMode} onView={setViewMode} onNew={onNew}
+            onEdit={(session) => { setEditingSession(session); setIsEditorOpen(true); }} />
+        </> : <section className="workspace-empty" aria-labelledby="empty-title" onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              void handleScanFiles(Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')));
+            }}>
+          <div className="empty-intro">
+            <h2 id="empty-title">أضف جدول محاضراتك</h2>
+            <p>اختر صورة أو لقطة شاشة للجدول، ثم راجع المحاضرات قبل حفظها.</p>
+          </div>
+          <button className="empty-upload" type="button" disabled={isScanning} onClick={onUpload}>
+            {isScanning ? <Loader2 size={23} className="animate-spin" aria-hidden="true" /> : <ScanLine size={23} aria-hidden="true" />}
+            <strong role={isScanning ? 'status' : undefined}>{isScanning ? 'جارٍ قراءة الجدول…' : 'استيراد صورة'}</strong>
+            {!isScanning && <small>أو اسحب الصورة إلى هنا</small>}
+          </button>
+          <div className="empty-actions">
+            <button className="button button-secondary" type="button" onClick={onNew}>
+              <Plus size={17} aria-hidden="true" /> إضافة محاضرة
+            </button>
+            <button className="empty-restore" type="button" onClick={(event) => openTool('backup', event.currentTarget)}>
+              استعادة جدول من جهاز آخر
+            </button>
+          </div>
+        </section>}
+      </main>
 
       {(activeTool === 'export' || activeTool === 'more') && <WorkspaceMenu type={activeTool} hasSchedule={hasSchedule}
         onTool={setActiveTool} onClose={closeTool} />}
