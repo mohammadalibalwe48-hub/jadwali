@@ -1,5 +1,8 @@
 import { createWorker, PSM, type Block, type Worker } from 'tesseract.js';
 import { canvasBlob, readScheduleGrids } from './gridOcr';
+import { readDay } from './scheduleGridParser';
+import { inspectScreenshot } from './screenshotGeometry';
+import { combinePortalFragments, readGroupedWeek, readPortalFragment, type PortalFragment, type ScanResult } from './scheduleLayouts';
 import {
   distinctMeetings,
   parseScheduleFromOcr,
@@ -143,18 +146,61 @@ async function prepareCanvasAndScanColors(file: File): Promise<{
   }
 }
 
-export async function runPureBrowserOcr(files: File[]): Promise<ParsedRawSession[]> {
+async function readWeekdayCrop(
+  source: HTMLCanvasElement, scale: number, arWorker: Worker, enWorker: Worker,
+  band: { top: number; bottom: number }, left: number, right: number
+) {
+  if (right <= left || band.bottom <= band.top) return undefined;
+  const cell = document.createElement('canvas');
+  cell.width = Math.ceil((right - left) * scale) + 24;
+  cell.height = Math.ceil((band.bottom - band.top) * scale) + 24;
+  const ctx = cell.getContext('2d')!;
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, cell.width, cell.height);
+  ctx.filter = 'grayscale(1) contrast(2)';
+  ctx.drawImage(source, left * scale, band.top * scale,
+    cell.width - 24, cell.height - 24, 12, 12, cell.width - 24, cell.height - 24);
+  const pixels = ctx.getImageData(0, 0, cell.width, cell.height).data;
+  let minX = cell.width, maxX = -1, minY = cell.height, maxY = -1;
+  for (let y = 0; y < cell.height; y++) {
+    for (let x = 0; x < cell.width; x++) {
+      if (pixels[(y * cell.width + x) * 4] > 150) continue;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  if (maxX <= minX || maxY <= minY) return undefined;
+  const crop = document.createElement('canvas');
+  crop.width = maxX - minX + 25;
+  crop.height = maxY - minY + 25;
+  const target = crop.getContext('2d')!;
+  target.fillStyle = 'white';
+  target.fillRect(0, 0, crop.width, crop.height);
+  target.drawImage(cell, minX, minY, crop.width - 24, crop.height - 24, 12, 12, crop.width - 24, crop.height - 24);
+  const blob = await canvasBlob(crop);
+  const options = { rotateAuto: false, tessedit_pageseg_mode: PSM.SINGLE_WORD };
+  const result = await arWorker.recognize(blob, options);
+  const ar = result.data.text.trim().replace(/[^\p{Script=Arabic}\s]/gu, '');
+  const day = readDay({ ar, en: '' });
+  if (day) return day;
+  const alternate = await enWorker.recognize(blob, options);
+  return readDay({ ar, en: alternate.data.text.trim() });
+}
+
+export async function runPureBrowserOcr(files: File[]): Promise<ScanResult> {
   const [arWorker, enWorker] = await Promise.all([getArWorker(), getEnWorker()]);
   const payloads: OcrPagePayload[] = [];
-  const gridSessions: ParsedRawSession[] = [];
+  const sessions: ParsedRawSession[] = [];
+  const fragments: PortalFragment[] = [];
+  const notices = new Set<string>();
   for (const file of files) {
-    const prep = await prepareCanvasAndScanColors(file);
-    const tableSessions = await readScheduleGrids(prep.canvas, arWorker, enWorker);
-    if (tableSessions !== null) {
-      gridSessions.push(...tableSessions);
+    const prep = await prepareCanvasAndScanColors(file).catch(() => null);
+    if (!prep) {
+      notices.add('تعذّر فتح إحدى الصور. جرّب إعادة رفعها بصيغة JPG أو PNG.');
       continue;
     }
-
     const recognize = async (canvas: HTMLCanvasElement) => {
       const blob = await canvasBlob(canvas);
       return Promise.all([
@@ -176,15 +222,40 @@ export async function runPureBrowserOcr(files: File[]): Promise<ParsedRawSession
       arLines = arLines.concat(blocksToOcrLines(arInv.data.blocks, prep.scale));
       enLines = enLines.concat(blocksToOcrLines(enInv.data.blocks, prep.scale));
     }
-    payloads.push({
+    const page: OcrPagePayload = {
       width: prep.canvas.width / prep.scale,
       height: prep.canvas.height / prep.scale,
       warmRows: prep.warmRows,
       coolRows: prep.coolRows,
       arLines,
       enLines,
+    };
+    const screenshot = inspectScreenshot(prep.canvas, prep.scale);
+    const portal = screenshot.portalTables.flatMap(({ header, rows }) => {
+      const fragment = readPortalFragment(page, header, rows);
+      return fragment ? [fragment] : [];
     });
+    if (portal.length) {
+      fragments.push(...portal);
+      continue;
+    }
+    const grouped = await readGroupedWeek(page, screenshot.daySeparators, (band, left, right) =>
+      readWeekdayCrop(prep.canvas, prep.scale, arWorker, enWorker, band, left, right));
+    if (grouped?.sessions.length) {
+      sessions.push(...grouped.sessions);
+      grouped.notices.forEach((notice) => notices.add(notice));
+      continue;
+    }
+    const grid = await readScheduleGrids(prep.canvas, arWorker, enWorker);
+    if (grid?.length) sessions.push(...grid);
+    else if (grid === null && grouped === null) payloads.push(page);
+    else notices.add('ظهرت عناوين الجدول لكن بعض الصفوف غير واضحة. جرّب صورة أقرب أو أضف لقطة أخرى.');
   }
 
-  return distinctMeetings([...gridSessions, ...parseScheduleFromOcr(payloads)]);
+  const portal = combinePortalFragments(fragments);
+  portal.notices.forEach((notice) => notices.add(notice));
+  return {
+    sessions: distinctMeetings([...sessions, ...portal.sessions, ...parseScheduleFromOcr(payloads)]),
+    notices: [...notices],
+  };
 }

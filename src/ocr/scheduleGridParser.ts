@@ -11,12 +11,12 @@ const ARABIC_DAYS = ['سبت', 'احد', 'اثنين', 'ثلاثاء', 'اربع
 const ENGLISH_DAYS = [/^sat(?:urday)?$/, /^sun(?:day)?$/, /^mon(?:day)?$/, /^tue(?:s|sday)?$/,
   /^wed(?:s|nesday)?$/, /^thu(?:r|rs|rsday)?$/, /^fri(?:day)?$/];
 
-function normalizeHeader(text: string): string {
+export function normalizeHeader(text: string): string {
   return text.normalize('NFKC').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه')
     .replace(/[\u0640\u064b-\u065f]/g, '').replace(/[^\p{L}\s]/gu, '').trim().toLowerCase();
 }
 
-function readDay(cell: GridText): DayOfWeek | undefined {
+export function readDay(cell: GridText): DayOfWeek | undefined {
   const ar = normalizeHeader(cell.ar).replace(/^يوم\s+/, '').replace(/^ال/, '');
   const en = normalizeHeader(cell.en).replace(/\s+/g, '');
   const a = ARABIC_DAYS.indexOf(ar);
@@ -24,7 +24,7 @@ function readDay(cell: GridText): DayOfWeek | undefined {
   return DAYS_ORDER[a === -1 ? e : a];
 }
 
-function readCode(text: string): string | undefined {
+export function readCode(text: string): string | undefined {
   const match = normalizeArabicDigits(text).match(/^\s*([a-z]{2,8})\s*[-_]?\s*(\d{2,5}[a-z]?)\s*$/i);
   return match ? (match[1] + match[2]).toUpperCase() : undefined;
 }
@@ -38,7 +38,7 @@ function typeIn(text: string): SessionType | undefined {
   if (/نظري|محاضرة|\b(?:T|theory|lecture)\b/i.test(text)) return 'نظري';
 }
 
-function readRoom(text: string): { room: string; hint?: SessionType; nextHint?: SessionType } {
+export function readRoom(text: string): { room: string; hint?: SessionType; nextHint?: SessionType } {
   const value = text.trim();
   if (/مدر[ّ]?ج/.test(value)) return { room: 'المدرّج' };
   const match = value.match(/\b([a-z]{2,10})[- ]+(\d{1,4}[a-z]?)\b/i) ||
@@ -76,7 +76,7 @@ function formatTime(minutes: number): string {
 
 type Meeting = Pick<ParsedRawSession, 'startTime' | 'endTime' | 'room'> & { type?: SessionType };
 
-function readMeetings(cell: GridText): Meeting[] {
+export function readMeetings(cell: GridText): Meeting[] {
   const read = (raw: string) => {
     const text = normalizeAsciiDigits(raw.normalize('NFKC'))
       .replace(/\b(a|p)\.?\s*m\.?/gi, '$1m').replace(/\b(\d{1,2})\s*;\s*(?=\d{2}\b)/g, '$1:');

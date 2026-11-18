@@ -6,6 +6,9 @@ import {
   type ScheduleMetadata,
 } from '../types';
 import { cleanRoomCode, detectFloorFromRoom } from '../utils/floorMapper';
+import { distinctMeetings } from '../ocr/scheduleOcrParser';
+import type { VisionOptions } from '../ocr/visionSettings';
+import { askVision } from './visionApi';
 import { runPureBrowserOcr } from '../ocr/browserOcr';
 
 function normalizeDay(raw: string): DayOfWeek {
@@ -22,12 +25,11 @@ function normalizeDay(raw: string): DayOfWeek {
 
 export async function uploadAndExtractSchedule(
   files: File[],
-  floorRules: FloorRule[]
-): Promise<{
-  metadata: ScheduleMetadata;
-  sessions: LectureSession[];
-}> {
-  const rawList = await runPureBrowserOcr(files);
+  floorRules: FloorRule[],
+  vision?: VisionOptions
+): Promise<{ sessions: LectureSession[]; notices: string[] }> {
+  const result = vision ? await askVision(files, vision) : await runPureBrowserOcr(files);
+  const rawList = distinctMeetings(result.sessions);
 
   const sessions: LectureSession[] = rawList.map((item, idx) => {
     const { room, hintedType } = cleanRoomCode(String(item.room || ''));
@@ -61,12 +63,8 @@ export async function uploadAndExtractSchedule(
   });
 
   return {
-    metadata: {
-      title: 'الجدول الدراسي الأسبوعي',
-      subtitle: '',
-      semester: 'الفصل الأول 2026 / 2027',
-    },
     sessions,
+    notices: result.notices,
   };
 }
 

@@ -1,5 +1,6 @@
 import type { Plugin } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import vision from '../api/vision';
 import { renderScheduleVectorPdf } from './pdfGenerator';
 
 function readJsonBody(req: IncomingMessage): Promise<any> {
@@ -20,10 +21,12 @@ function readJsonBody(req: IncomingMessage): Promise<any> {
 
 export function dawamnaApiPlugin(): Plugin {
   return {
-    name: 'dawamna-local-pdf-api',
+    name: 'jadwali-local-api',
     configureServer(server) {
       server.middlewares.use(async (req, res: ServerResponse, next) => {
         const url = req.url?.split('?')[0];
+
+        if (url === '/api/vision') return vision(req, res);
 
         if (req.method === 'POST' && url === '/api/pdf') {
           try {
