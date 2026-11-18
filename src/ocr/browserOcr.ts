@@ -1,5 +1,7 @@
 import { createWorker, PSM, type Block, type Worker } from 'tesseract.js';
+import { canvasBlob, readScheduleGrids } from './gridOcr';
 import {
+  distinctMeetings,
   parseScheduleFromOcr,
   type OcrLine,
   type OcrPagePayload,
@@ -36,22 +38,22 @@ function getEnWorker(): Promise<Worker> {
   return enWorkerPromise;
 }
 
-function blocksToOcrLines(blocks: Block[] | null | undefined, invScale = 1): OcrLine[] {
+function blocksToOcrLines(blocks: Block[] | null | undefined, scale: number): OcrLine[] {
   const out: OcrLine[] = [];
   for (const block of blocks || []) {
     for (const para of block.paragraphs || []) {
       for (const line of para.lines || []) {
-        const lx = line.bbox.x0 / invScale;
-        const ly = line.bbox.y0 / invScale;
-        const lw = (line.bbox.x1 - line.bbox.x0) / invScale;
-        const lh = (line.bbox.y1 - line.bbox.y0) / invScale;
+        const lx = line.bbox.x0 / scale;
+        const ly = line.bbox.y0 / scale;
+        const lw = (line.bbox.x1 - line.bbox.x0) / scale;
+        const lh = (line.bbox.y1 - line.bbox.y0) / scale;
 
         const words = (line.words || []).map((w) => ({
           text: w.text,
-          x: Math.round((w.bbox.x0 / invScale) * 10) / 10,
-          y: Math.round((w.bbox.y0 / invScale) * 10) / 10,
-          w: Math.round(((w.bbox.x1 - w.bbox.x0) / invScale) * 10) / 10,
-          h: Math.round(((w.bbox.y1 - w.bbox.y0) / invScale) * 10) / 10,
+          x: Math.round((w.bbox.x0 / scale) * 10) / 10,
+          y: Math.round((w.bbox.y0 / scale) * 10) / 10,
+          w: Math.round(((w.bbox.x1 - w.bbox.x0) / scale) * 10) / 10,
+          h: Math.round(((w.bbox.y1 - w.bbox.y0) / scale) * 10) / 10,
         }));
 
         out.push({
@@ -69,11 +71,9 @@ function blocksToOcrLines(blocks: Block[] | null | undefined, invScale = 1): Ocr
 }
 
 async function prepareCanvasAndScanColors(file: File): Promise<{
-  normalBlob: Blob;
-  invertedBlob: Blob | null;
-  origWidth: number;
-  origHeight: number;
+  canvas: HTMLCanvasElement;
   scale: number;
+  darkMode: boolean;
   warmRows: number[];
   coolRows: number[];
 }> {
@@ -82,36 +82,38 @@ async function prepareCanvasAndScanColors(file: File): Promise<{
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const el = new Image();
       el.onload = () => resolve(el);
-      el.onerror = reject;
+      el.onerror = () => reject(new Error('تعذّر فتح الصورة. جرّب صورة بصيغة JPG أو PNG.'));
       el.src = objUrl;
     });
 
-    const origWidth = img.naturalWidth || img.width;
-    const origHeight = img.naturalHeight || img.height;
-
-    // Scan original image pixels for warm ("عملي") and cool ("نظري") badge rows + dark-mode check
+    // Bound decoded canvas memory on phones while preserving small printed text.
+    const scale = Math.min(2, 1700 / img.naturalWidth, 3300 / Math.max(img.naturalWidth, img.naturalHeight));
+    const width = Math.max(1, Math.round(img.naturalWidth * scale));
+    const height = Math.max(1, Math.round(img.naturalHeight * scale));
     const scanCanvas = document.createElement('canvas');
-    scanCanvas.width = origWidth;
-    scanCanvas.height = origHeight;
+    scanCanvas.width = width;
+    scanCanvas.height = height;
     const scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
     if (!scanCtx) throw new Error('Canvas 2D unavailable');
-    scanCtx.drawImage(img, 0, 0, origWidth, origHeight);
+    scanCtx.fillStyle = 'white';
+    scanCtx.fillRect(0, 0, width, height);
+    scanCtx.drawImage(img, 0, 0, width, height);
 
-    const imgData = scanCtx.getImageData(0, 0, origWidth, origHeight).data;
+    const imgData = scanCtx.getImageData(0, 0, width, height).data;
     const warmRows: number[] = [];
     const coolRows: number[] = [];
-    const stepY = Math.max(2, Math.floor(origHeight / 320));
-    const stepX = Math.max(3, Math.floor(origWidth / 220));
-    const maxXScan = Math.floor(origWidth * 0.83);
+    const stepY = Math.max(2, Math.floor(height / 320));
+    const stepX = Math.max(3, Math.floor(width / 220));
+    const maxXScan = Math.floor(width * 0.83);
 
     let darkPixels = 0;
     let totalSampled = 0;
 
-    for (let y = 0; y < origHeight; y += stepY) {
+    for (let y = 0; y < height; y += stepY) {
       let warmCount = 0;
       let coolCount = 0;
       for (let x = 0; x < maxXScan; x += stepX) {
-        const idx = (y * origWidth + x) * 4;
+        const idx = (y * width + x) * 4;
         const r = imgData[idx];
         const g = imgData[idx + 1];
         const b = imgData[idx + 2];
@@ -125,47 +127,14 @@ async function prepareCanvasAndScanColors(file: File): Promise<{
           coolCount++;
         }
       }
-      if (warmCount >= 2) warmRows.push(y);
-      if (coolCount >= 3) coolRows.push(y);
-    }
-
-    // Upscale modestly if image is narrow so small digits/room letters are sharp
-    const scale = origWidth < 1400 ? Math.min(1.8, 1500 / origWidth) : 1;
-    const targetW = Math.round(origWidth * scale);
-    const targetH = Math.round(origHeight * scale);
-
-    const upCanvas = document.createElement('canvas');
-    upCanvas.width = targetW;
-    upCanvas.height = targetH;
-    const upCtx = upCanvas.getContext('2d')!;
-    upCtx.fillStyle = '#FFFFFF';
-    upCtx.fillRect(0, 0, targetW, targetH);
-    upCtx.drawImage(img, 0, 0, targetW, targetH);
-
-    const normalBlob = await new Promise<Blob>((res, rej) =>
-      upCanvas.toBlob((b) => (b ? res(b) : rej(new Error('Blob failed'))), 'image/png')
-    );
-
-    // Only run an extra inverted OCR pass if the screenshot is predominantly dark-mode (>45% dark pixels)
-    let invertedBlob: Blob | null = null;
-    if (totalSampled > 0 && darkPixels / totalSampled > 0.45) {
-      const invCanvas = document.createElement('canvas');
-      invCanvas.width = targetW;
-      invCanvas.height = targetH;
-      const invCtx = invCanvas.getContext('2d')!;
-      invCtx.filter = 'invert(1)';
-      invCtx.drawImage(upCanvas, 0, 0);
-      invertedBlob = await new Promise<Blob>((res, rej) =>
-        invCanvas.toBlob((b) => (b ? res(b) : rej(new Error('Inv blob failed'))), 'image/png')
-      );
+      if (warmCount >= 2) warmRows.push(y / scale);
+      if (coolCount >= 3) coolRows.push(y / scale);
     }
 
     return {
-      normalBlob,
-      invertedBlob,
-      origWidth,
-      origHeight,
+      canvas: scanCanvas,
       scale,
+      darkMode: totalSampled > 0 && darkPixels / totalSampled > 0.45,
       warmRows,
       coolRows,
     };
@@ -177,30 +146,39 @@ async function prepareCanvasAndScanColors(file: File): Promise<{
 export async function runPureBrowserOcr(files: File[]): Promise<ParsedRawSession[]> {
   const [arWorker, enWorker] = await Promise.all([getArWorker(), getEnWorker()]);
   const payloads: OcrPagePayload[] = [];
-
+  const gridSessions: ParsedRawSession[] = [];
   for (const file of files) {
     const prep = await prepareCanvasAndScanColors(file);
+    const tableSessions = await readScheduleGrids(prep.canvas, arWorker, enWorker);
+    if (tableSessions !== null) {
+      gridSessions.push(...tableSessions);
+      continue;
+    }
 
-    const [arRes, enRes] = await Promise.all([
-      arWorker.recognize(prep.normalBlob, {}, { blocks: true }),
-      enWorker.recognize(prep.normalBlob, {}, { blocks: true }),
-    ]);
-
+    const recognize = async (canvas: HTMLCanvasElement) => {
+      const blob = await canvasBlob(canvas);
+      return Promise.all([
+        arWorker.recognize(blob, {}, { blocks: true }),
+        enWorker.recognize(blob, {}, { blocks: true }),
+      ]);
+    };
+    const [arRes, enRes] = await recognize(prep.canvas);
     let arLines = blocksToOcrLines(arRes.data.blocks, prep.scale);
     let enLines = blocksToOcrLines(enRes.data.blocks, prep.scale);
-
-    if (prep.invertedBlob) {
-      const [arInv, enInv] = await Promise.all([
-        arWorker.recognize(prep.invertedBlob, {}, { blocks: true }),
-        enWorker.recognize(prep.invertedBlob, {}, { blocks: true }),
-      ]);
+    if (prep.darkMode) {
+      const inverted = document.createElement('canvas');
+      inverted.width = prep.canvas.width;
+      inverted.height = prep.canvas.height;
+      const ctx = inverted.getContext('2d')!;
+      ctx.filter = 'invert(1)';
+      ctx.drawImage(prep.canvas, 0, 0);
+      const [arInv, enInv] = await recognize(inverted);
       arLines = arLines.concat(blocksToOcrLines(arInv.data.blocks, prep.scale));
       enLines = enLines.concat(blocksToOcrLines(enInv.data.blocks, prep.scale));
     }
-
     payloads.push({
-      width: prep.origWidth,
-      height: prep.origHeight,
+      width: prep.canvas.width / prep.scale,
+      height: prep.canvas.height / prep.scale,
       warmRows: prep.warmRows,
       coolRows: prep.coolRows,
       arLines,
@@ -208,5 +186,5 @@ export async function runPureBrowserOcr(files: File[]): Promise<ParsedRawSession
     });
   }
 
-  return parseScheduleFromOcr(payloads);
+  return distinctMeetings([...gridSessions, ...parseScheduleFromOcr(payloads)]);
 }
