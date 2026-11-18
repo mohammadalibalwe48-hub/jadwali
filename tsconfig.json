@@ -16,5 +16,5 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "api/vision.ts"]
+  "include": ["src", "api/vision.ts", "api/pdf.ts"]
 }

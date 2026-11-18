@@ -2,7 +2,8 @@
   "functions": {
     "api/pdf.ts": {
       "maxDuration": 30,
-      "memory": 1024
+      "memory": 1024,
+      "includeFiles": "server/fonts/**"
     },
     "api/vision.ts": {
       "maxDuration": 100
