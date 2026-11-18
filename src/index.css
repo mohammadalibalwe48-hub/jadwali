@@ -40,7 +40,7 @@
   body { margin: 0; }
   button:not(:disabled), a[href] { cursor: pointer; }
   :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  ::selection { background: #ecd7cd; color: #37231a; }
+  ::selection { background: #dbef9c; color: #163833; }
 }
 
 .font-mono-num {

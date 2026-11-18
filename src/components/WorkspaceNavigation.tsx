@@ -1,5 +1,5 @@
 import {
-  CalendarRange, ChevronLeft, Cloud, FileText, Image, Layers, MoreHorizontal, Settings2, Smartphone,
+  CalendarDays, CalendarRange, ChevronLeft, ClipboardCheck, Cloud, Download, FileText, Image, Layers, MoreHorizontal, Settings2, Smartphone,
 } from 'lucide-react';
 import { ToolDialog } from './ToolDialog';
 
@@ -33,11 +33,11 @@ export function WorkspaceNavigation({ onTool, onSchedule }: NavigationProps) {
           <span>جدولي</span>
         </button>
         <nav className="workspace-nav" aria-label="التنقّل الرئيسي">
-          <button type="button" className="workspace-nav-item" aria-current="page" onClick={onSchedule}>الجدول</button>
+          <button type="button" className="workspace-nav-item" aria-current="page" onClick={onSchedule}><CalendarDays size={17} aria-hidden="true" />الجدول</button>
           <button type="button" className="workspace-nav-item" aria-haspopup="dialog"
-            onClick={(event) => onTool('attendance', event.currentTarget)}>الحضور</button>
+            onClick={(event) => onTool('attendance', event.currentTarget)}><ClipboardCheck size={17} aria-hidden="true" />الحضور</button>
           <button type="button" className="workspace-nav-item nav-export" aria-label="التصدير" aria-haspopup="dialog"
-            onClick={(event) => onTool('export', event.currentTarget)}>التصدير</button>
+            onClick={(event) => onTool('export', event.currentTarget)}><Download size={17} aria-hidden="true" />التصدير</button>
           <button type="button" className="workspace-nav-item nav-more" aria-label="المزيد" aria-haspopup="dialog"
             onClick={(event) => onTool('more', event.currentTarget)}><MoreHorizontal size={21} aria-hidden="true" /></button>
         </nav>
