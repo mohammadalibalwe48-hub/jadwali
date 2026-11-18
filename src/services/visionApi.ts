@@ -1,12 +1,13 @@
-import type { ScanResult } from '../ocr/scheduleLayouts';
-import { MAX_VISION_BODY, MAX_VISION_SCREENS, type VisionOptions } from '../ocr/visionSettings';
+import { MAX_VISION_BODY, MAX_VISION_SCREENS, type ScannedMeeting } from './visionSettings';
 
 async function resizedImage(file: File, size: number, quality: number): Promise<string> {
   const url = URL.createObjectURL(file);
   try {
     const image = new Image();
     image.src = url;
-    await image.decode();
+    await image.decode().catch(() => {
+      throw new Error('تعذّر فتح إحدى الصور. جرّب صورة بصيغة JPG أو PNG.');
+    });
     const ratio = Math.min(1, size / Math.max(image.naturalWidth, image.naturalHeight));
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
@@ -28,7 +29,7 @@ const issues: Record<string, string> = {
   cropped: 'بعض الخلايا مقصوصة. أضف لقطة تغطي الأيام والأوقات الناقصة.',
 };
 
-export async function askVision(files: File[], options: VisionOptions): Promise<ScanResult> {
+export async function askVision(files: File[]): Promise<{ sessions: ScannedMeeting[]; notices: string[] }> {
   if (!files.length || files.length > MAX_VISION_SCREENS) {
     throw new Error(`اختر من صورة واحدة إلى ${MAX_VISION_SCREENS} صور للمسح بالنموذج.`);
   }
@@ -36,17 +37,18 @@ export async function askVision(files: File[], options: VisionOptions): Promise<
   for (const [size, quality] of [[2100, 0.9], [1650, 0.87], [1300, 0.81]]) {
     const images = [];
     for (const file of files) images.push(await resizedImage(file, size, quality));
-    body = JSON.stringify({ mode: options.mode, images });
+    body = JSON.stringify({ images });
     if (body.length <= MAX_VISION_BODY) break;
   }
   if (body.length > MAX_VISION_BODY) throw new Error('حجم الصور كبير. اختر عدداً أقل منها.');
-  const credential = options.credential.trim();
   const response = await fetch('/api/vision', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(credential ? { Authorization: `Bearer ${credential}` } : {}) },
+    headers: { 'Content-Type': 'application/json' },
     body,
   });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'تعذّر المسح بالنموذج.');
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !Array.isArray(result?.sessions) || !Array.isArray(result?.issues)) {
+    throw new Error(result?.error || 'تعذّرت قراءة الصور. أعد المحاولة.');
+  }
   return { sessions: result.sessions, notices: (result.issues as string[]).map((issue) => issues[issue]).filter(Boolean) };
 }

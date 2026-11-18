@@ -21,7 +21,6 @@ import {
 import { DEFAULT_FLOOR_RULES, detectFloorFromRoom } from './utils/floorMapper';
 import { generateVectorPdfFile, uploadAndExtractSchedule } from './services/clientApi';
 import { ImportReview } from './components/ImportReview';
-import type { VisionOptions } from './ocr/visionSettings';
 import { SessionEditorModal } from './components/SessionEditorModal';
 import { FloorRulesModal } from './components/FloorRulesModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -76,7 +75,7 @@ export function App() {
 
   // Extraction & Export states
   const [isScanning, setIsScanning] = useState(false);
-  const [scan, setScan] = useState<{ files: File[]; sessions: LectureSession[]; notices: string[] } | null>(null);
+  const [scan, setScan] = useState<{ files: File[]; sessions: LectureSession[]; notices: string[]; failed: boolean } | null>(null);
   const [statusToast, setStatusToast] = useState<{
     kind: 'info' | 'error';
     text: string;
@@ -117,21 +116,22 @@ export function App() {
     return () => window.removeEventListener('paste', onPaste);
   });
 
-  const handleScanFiles = async (files: File[], vision?: VisionOptions) => {
+  const handleScanFiles = async (files: File[]) => {
     if (!files.length || scanInProgress.current) return;
     scanInProgress.current = true;
     setIsScanning(true);
     setStatusToast(null);
     try {
-      const result = await uploadAndExtractSchedule(files, floorRules, vision);
+      const result = await uploadAndExtractSchedule(files, floorRules);
       setScan((previous) => ({
         files,
-        sessions: vision && !result.sessions.length ? previous?.sessions ?? [] : result.sessions,
+        sessions: result.sessions.length ? result.sessions : previous?.sessions ?? [],
         notices: result.notices,
+        failed: false,
       }));
     } catch (err) {
       const notice = err instanceof Error ? err.message : 'تعذّرت قراءة الصور. جرّب مرة أخرى.';
-      setScan((previous) => ({ files, sessions: previous?.sessions ?? [], notices: [notice] }));
+      setScan((previous) => ({ files, sessions: previous?.sessions ?? [], notices: [notice], failed: true }));
     } finally {
       scanInProgress.current = false;
       setIsScanning(false);
@@ -372,7 +372,7 @@ export function App() {
                       ارفع صورة الجدول أو لقطة شاشة
                     </div>
                     <div className="text-xs text-[#6B6962]">
-                      يمكنك اختيار صورة واحدة أو عدة لقطات معاً من الموبايل
+                      تُرسل الصور إلى نموذج Qwen للقراءة، ثم يمكنك مراجعة النتائج قبل إضافتها.
                     </div>
                   </div>
                   <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#141413] bg-[#F5F4EF] px-3.5 py-2 rounded-full">
@@ -788,7 +788,7 @@ export function App() {
         busy={isScanning}
         onClose={() => setScan(null)}
         onAddImages={(files) => handleScanFiles([...scan.files, ...files])}
-        onScanWithModel={(options) => handleScanFiles(scan.files, options)}
+        onRetry={scan.failed ? () => handleScanFiles(scan.files) : undefined}
         onImport={importSelected}
       />}
       <SessionEditorModal
