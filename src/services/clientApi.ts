@@ -3,7 +3,6 @@ import {
   isSameMeeting,
   type FloorRule,
   type LectureSession,
-  type ScheduleMetadata,
 } from '../types';
 import { cleanRoomCode, detectFloorFromRoom } from '../utils/floorMapper';
 import { askVision } from './visionApi';
@@ -33,32 +32,4 @@ export async function uploadAndExtractSchedule(
     return day || a.startTime.localeCompare(b.startTime);
   });
   return { sessions, notices: result.notices };
-}
-
-export async function generateVectorPdfFile(
-  metadata: ScheduleMetadata,
-  sessions: LectureSession[],
-  floorRules: FloorRule[]
-): Promise<{ blob: Blob; file: File; url: string }> {
-  const response = await fetch('/api/pdf', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ metadata, sessions, floorRules }),
-  });
-
-  if (!response.ok) {
-    let errText = 'تعذّر إنشاء ملف PDF';
-    try {
-      const errJson = await response.json();
-      if (errJson?.error) errText = errJson.error;
-    } catch {
-      // ignore
-    }
-    throw new Error(errText);
-  }
-
-  const blob = await response.blob();
-  const file = new File([blob], 'schedule.pdf', { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
-  return { blob, file, url };
 }

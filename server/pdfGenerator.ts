@@ -1,429 +1,213 @@
+import { existsSync, readFileSync } from 'node:fs';
 import puppeteer, { type Browser } from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
-import fs from 'node:fs';
+import { DAYS_ORDER, type FloorRule, type LectureSession, type ScheduleMetadata } from '../src/types.js';
 
-const LOCAL_BROWSER_PATHS = [
+const localBrowserPaths = [
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
   'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   '/usr/bin/google-chrome',
+  '/usr/bin/chromium',
   '/usr/bin/chromium-browser',
 ];
 
-let sharedBrowser: Browser | null = null;
+let browserPromise: Promise<Browser> | undefined;
 
-async function getBrowser(): Promise<Browser> {
-  if (sharedBrowser && sharedBrowser.connected) {
-    return sharedBrowser;
-  }
-
-  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
-
-  if (isServerless) {
-    const executablePath = await chromium.executablePath();
-    sharedBrowser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath,
+function getBrowser(): Promise<Browser> {
+  browserPromise ??= (async () => {
+    const localPath = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+      ? undefined
+      : localBrowserPaths.find((path) => existsSync(path));
+    const browser = await puppeteer.launch({
+      executablePath: localPath ?? await chromium.executablePath(),
+      args: localPath ? ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu'] : chromium.args,
       headless: true,
     });
-    return sharedBrowser;
-  }
-
-  const localPath = LOCAL_BROWSER_PATHS.find((p) => fs.existsSync(p));
-  if (!localPath) {
-    const executablePath = await chromium.executablePath();
-    sharedBrowser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath,
-      headless: true,
-    });
-    return sharedBrowser;
-  }
-
-  sharedBrowser = await puppeteer.launch({
-    executablePath: localPath,
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--font-render-hinting=none'],
+    browser.once('disconnected', () => { browserPromise = undefined; });
+    return browser;
+  })().catch((error) => {
+    browserPromise = undefined;
+    throw error;
   });
-  return sharedBrowser;
-}
-
-const DAYS_ORDER = [
-  'السبت',
-  'الأحد',
-  'الإثنين',
-  'الثلاثاء',
-  'الأربعاء',
-  'الخميس',
-  'الجمعة',
-];
-
-export interface PdfSession {
-  id: string;
-  day: string;
-  startTime: string;
-  endTime: string;
-  courseName: string;
-  courseCode?: string;
-  type: 'نظري' | 'عملي';
-  room: string;
-  floor: string;
-}
-
-export interface PdfFloorRule {
-  prefix: string;
-  floor: string;
+  return browserPromise;
 }
 
 export interface PdfRequestPayload {
-  metadata: {
-    title: string;
-    subtitle?: string;
-    semester: string;
+  metadata?: Partial<ScheduleMetadata>;
+  sessions: Pick<LectureSession, 'day' | 'startTime' | 'endTime' | 'courseName' | 'courseCode' | 'type' | 'room' | 'floor'>[];
+  floorRules: Pick<FloorRule, 'prefix' | 'floor'>[];
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+let embeddedFonts: string | undefined;
+
+function fontStyle(): string {
+  // Noto Sans Arabic 5.3.0 from Fontsource, licensed under the SIL OFL.
+  const subsets = {
+    latin: 'U+0000-00FF, U+2000-206F, U+20AC, U+2212',
+    arabic: 'U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200E, U+FB50-FDFF, U+FE70-FEFF',
   };
-  sessions: PdfSession[];
-  floorRules: PdfFloorRule[];
+  embeddedFonts ??= Object.entries(subsets).flatMap(([subset, range]) => [400, 700].map((weight) => {
+    const location = new URL(`./fonts/noto-sans-arabic-${subset}-${weight}.woff2`, import.meta.url);
+    return `@font-face {
+      font-family: Schedule;
+      src: url(data:font/woff2;base64,${readFileSync(location).toString('base64')}) format('woff2');
+      font-weight: ${weight};
+      unicode-range: ${range};
+    }`;
+  })).join('\n');
+  return embeddedFonts;
 }
 
-function escapeHtml(str: string): string {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-export function buildSwissScheduleHtml(data: PdfRequestPayload): string {
-  const sorted = [...(data.sessions || [])].sort((a, b) => {
-    const d = DAYS_ORDER.indexOf(a.day) - DAYS_ORDER.indexOf(b.day);
-    if (d !== 0) return d;
-    return a.startTime.localeCompare(b.startTime);
-  });
-
-  const activeDays = new Set(sorted.map((s) => s.day));
-  const offDays = DAYS_ORDER.filter((d) => !activeDays.has(d));
-  const uniqueCourses = new Set(sorted.map((s) => s.courseName.trim())).size;
-
-  const count = sorted.length;
-  const rowPadY = count > 12 ? '8px' : count > 9 ? '11px' : '14px';
-  const baseFont = count > 12 ? '13px' : '14.5px';
-
-  const groupedByDay = DAYS_ORDER.map((day) => ({
+function buildScheduleHtml({ metadata, sessions, floorRules }: PdfRequestPayload): string {
+  const groups = DAYS_ORDER.map((day) => ({
     day,
-    items: sorted.filter((s) => s.day === day),
-  })).filter((g) => g.items.length > 0);
+    meetings: sessions.filter((item) => item.day === day)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime)),
+  }));
+  const offDays = groups.filter(({ meetings }) => !meetings.length).map(({ day }) => day);
+  const courseCount = new Set(sessions.map(({ courseCode, courseName }) =>
+    courseCode?.trim().toUpperCase() || courseName.trim())).size;
+  const title = escapeHtml(metadata?.title?.trim() || 'الجدول الدراسي الأسبوعي');
+  const semester = escapeHtml(metadata?.semester?.trim() || '').replace(
+    /[\d٠-٩]{4}\s*[\/–-]\s*[\d٠-٩]{4}/g, (years) => `<bdi dir="ltr">${years}</bdi>`,
+  );
+  const subtitle = metadata?.subtitle?.trim();
+  const countFormat = new Intl.NumberFormat('ar');
+  const tableRows = groups.filter(({ meetings }) => meetings.length).map(({ day, meetings }) => `
+    <tbody${meetings.length <= 6 ? ' class="keep-together"' : ''}>
+      <tr class="day"><th scope="rowgroup" colspan="3">${escapeHtml(day)}</th></tr>
+      ${meetings.map((item) => `
+        <tr class="meeting">
+          <td class="time"><bdi dir="ltr">${escapeHtml(item.startTime)}–${escapeHtml(item.endTime)}</bdi></td>
+          <td>
+            <strong class="course" dir="auto">${escapeHtml(item.courseName)}</strong>
+            <div class="course-details">
+              <span class="type ${item.type === 'عملي' ? 'practical' : 'theory'}">${escapeHtml(item.type)}</span>
+              ${item.courseCode ? `<bdi class="code" dir="ltr">${escapeHtml(item.courseCode)}</bdi>` : ''}
+            </div>
+          </td>
+          <td>
+            <strong class="room" dir="auto">${escapeHtml(item.room || '—')}</strong>
+            ${item.floor && item.floor !== '—' ? `<span class="floor" dir="auto">${escapeHtml(item.floor)}</span>` : ''}
+          </td>
+        </tr>
+      `).join('')}
+    </tbody>
+  `).join('');
+  const floorLegend = floorRules.map(({ prefix, floor }) =>
+    `<span><bdi><strong>${escapeHtml(prefix)}</strong></bdi> <bdi>${escapeHtml(floor)}</bdi></span>`).join('');
 
-  const rowsHtml = groupedByDay
-    .map((group, gIdx) =>
-      group.items
-        .map((item, idx) => {
-          const isFirstOfDay = idx === 0;
-          const topBorder =
-            gIdx === 0 && idx === 0
-              ? 'none'
-              : isFirstOfDay
-              ? '1.5px solid #181816'
-              : '1px solid #E6E4DD';
-          const isPractical = item.type === 'عملي';
-
-          return `
-            <tr style="border-top: ${topBorder};">
-              ${
-                isFirstOfDay
-                  ? `<td rowspan="${group.items.length}" class="day-cell">${escapeHtml(
-                      group.day
-                    )}</td>`
-                  : ''
-              }
-              <td class="time-cell" dir="ltr">${escapeHtml(item.startTime)} – ${escapeHtml(
-            item.endTime
-          )}</td>
-              <td class="course-cell">
-                <div class="course-title">${escapeHtml(item.courseName)}</div>
-                ${
-                  item.courseCode
-                    ? `<div class="course-code" dir="ltr">${escapeHtml(item.courseCode)}</div>`
-                    : ''
-                }
-              </td>
-              <td class="type-cell">
-                <span class="badge ${isPractical ? 'badge-prac' : 'badge-theo'}">${escapeHtml(
-            item.type
-          )}</span>
-              </td>
-              <td class="room-cell" dir="ltr">${escapeHtml(item.room)}</td>
-              <td class="floor-cell">${escapeHtml(item.floor || '—')}</td>
-            </tr>
-          `;
-        })
-        .join('')
-    )
-    .join('');
-
-  const legend = (data.floorRules || [])
-    .map((r) => `<span><strong dir="ltr">${escapeHtml(r.prefix)}</strong> ${escapeHtml(r.floor)}</span>`)
-    .join('<span class="dot">·</span>');
-
-  return `<!DOCTYPE html>
+  return `<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8">
+  <title>${title}</title>
   <style>
-    @page {
-      size: A4 portrait;
-      margin: 0;
-    }
-    * {
-      box-sizing: border-box;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 210mm;
-      height: 297mm;
-      overflow: hidden;
-      background: #FFFFFF;
-      color: #141413;
-      font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
-    }
-    .page {
-      width: 210mm;
-      height: 297mm;
-      padding: 14mm 15mm;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .top-block {
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding-bottom: 16px;
-      border-bottom: 2.5px solid #141413;
-    }
-    .eyebrow {
-      font-size: 12px;
-      font-weight: 600;
-      color: #6B6963;
-      margin-bottom: 4px;
-    }
-    .title {
-      margin: 0;
-      font-size: 26px;
-      font-weight: 700;
-      color: #141413;
-      line-height: 1.2;
-    }
-    .subtitle {
-      margin-top: 4px;
-      font-size: 13px;
-      color: #57554F;
-      font-weight: 500;
-    }
-    .stats {
-      display: flex;
-      gap: 18px;
-      text-align: left;
-    }
-    .stat-box {
-      border-right: 1.5px solid #E5E3DC;
-      padding-right: 14px;
-    }
-    .stat-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 22px;
-      font-weight: 700;
-      color: #141413;
-      line-height: 1.1;
-    }
-    .stat-lbl {
-      font-size: 11.5px;
-      font-weight: 600;
-      color: #6B6963;
-      margin-top: 2px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: ${baseFont};
-      border-bottom: 2px solid #141413;
-    }
-    thead tr {
-      background: #F6F5F0;
-      border-top: 1.5px solid #141413;
-      border-bottom: 1.5px solid #141413;
-    }
-    th {
-      padding: 10px 12px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #3D3C38;
-      text-align: right;
-    }
-    th.center { text-align: center; }
-    td {
-      padding: ${rowPadY} 12px;
-      vertical-align: middle;
-    }
-    .day-cell {
-      font-weight: 700;
-      font-size: 15px;
-      color: #141413;
-      background: #FAF9F6;
-      border-left: 1px solid #E6E4DD;
-      width: 13%;
-      vertical-align: middle;
-    }
-    .time-cell {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      font-weight: 600;
-      color: #2C2B28;
-      text-align: right;
-      width: 20%;
-      white-space: nowrap;
-    }
-    .course-cell { width: 33%; }
-    .course-title { font-weight: 700; color: #141413; }
-    .course-code {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 500;
-      color: #78766F;
-      margin-top: 1px;
-      display: inline-block;
-    }
-    .type-cell { text-align: center; width: 11%; }
-    .badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .badge-theo {
-      background: #EBF2FA;
-      color: #1E3A5F;
-    }
-    .badge-prac {
-      background: #FEF0E6;
-      color: #9A3412;
-    }
-    .room-cell {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 700;
-      font-size: 14px;
-      text-align: center;
-      color: #141413;
-      width: 11%;
-    }
-    .floor-cell {
-      text-align: center;
-      font-weight: 600;
-      color: #3D3C38;
-      width: 12%;
-    }
-    .footer {
-      display: flex;
-      justify-content: space-between;
+    ${fontStyle()}
+    @page { size: A4 portrait; margin: 12mm 13mm; }
+    * { box-sizing: border-box; }
+    html { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    body { margin: 0; color: #132d30; background: #fff; font-family: Schedule, sans-serif; font-size: 13px; line-height: 1.46; }
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 20px;
       align-items: center;
-      padding-top: 12px;
-      border-top: 1px solid #E5E3DC;
-      font-size: 12px;
-      color: #57554F;
+      padding: 17px 20px;
+      background: #eaf4f1;
+      border-top: 4px solid #1d5652;
+      border-radius: 0 0 10px 10px;
+      break-inside: avoid;
+      margin-bottom: 16px;
     }
-    .footer strong { color: #141413; }
-    .legend { display: flex; align-items: center; gap: 8px; }
-    .dot { color: #B8B5AC; }
+    h1 { font-size: 30px; line-height: 1.3; margin: 2px 0; font-weight: 700; overflow-wrap: anywhere; }
+    .semester { font-size: 12px; font-weight: 700; color: #2f5b56; overflow-wrap: anywhere; }
+    .subtitle { margin-top: 4px; color: #3e5558; overflow-wrap: anywhere; }
+    dl { display: flex; gap: 14px; margin: 0; text-align: center; }
+    dl div { min-width: 61px; padding: 3px 8px; border-inline-start: 1px solid #bed5cf; }
+    dt { font-size: 10px; color: #3e5558; }
+    dd { margin: 0; font-size: 22px; line-height: 1.1; font-weight: 700; font-variant-numeric: tabular-nums; }
+    table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+    col.time-column { width: 23%; } col.course-column { width: 56%; } col.location-column { width: 21%; }
+    thead { display: table-header-group; }
+    thead th { background: #1d5652; color: #fff; padding: 7px 12px; font-size: 11px; text-align: right; }
+    tbody.keep-together, tr { break-inside: avoid; }
+    .day { break-after: avoid; }
+    .day th {
+      background: #edf5f3;
+      padding: 4px 12px;
+      border-top: 2px solid #fff;
+      border-bottom: 1px solid #c8dcd8;
+      color: #1b514c;
+      text-align: right;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    td { padding: 6px 12px; border-bottom: 1px solid #e2e9e7; vertical-align: middle; overflow-wrap: anywhere; }
+    .meeting:nth-child(odd) { background: #fafcfb; }
+    .time { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 700; }
+    .time bdi { white-space: nowrap; }
+    .course { display: block; text-align: right; font-size: 15px; font-weight: 700; }
+    .course-details { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+    .type { display: inline-block; padding: 0 7px; font-size: 10px; font-weight: 700; border-radius: 4px; }
+    .theory { background: #e4edf7; color: #244768; }
+    .practical { background: #fbebd8; color: #77451d; }
+    .code { font-size: 10px; font-weight: 700; color: #415a5b; }
+    .room { display: block; text-align: right; font-size: 14px; font-weight: 700; }
+    .floor { display: block; text-align: right; font-size: 11px; color: #465a5d; }
+    .compact td { padding-top: 4px; padding-bottom: 4px; }
+    .compact .day th { padding-top: 3px; padding-bottom: 3px; }
+    footer { margin-top: 13px; color: #40585b; font-size: 11px; break-inside: avoid; }
+    .off-days { padding: 6px 12px; background: #edf5f3; border-inline-start: 3px solid #1d5652; border-radius: 4px; }
+    .off-days strong { margin-inline-end: 8px; color: #1b514c; }
+    .legend { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 12px; padding: 8px 0 0; }
+    .legend span { max-width: 100%; overflow-wrap: anywhere; }
   </style>
 </head>
 <body>
-  <div class="page">
-    <div class="top-block">
-      <div class="header">
-        <div>
-          <div class="eyebrow">${escapeHtml(data.metadata?.semester || 'الفصل الأول 2026 / 2027')}</div>
-          <h1 class="title">${escapeHtml(data.metadata?.title || 'الجدول الدراسي الأسبوعي')}</h1>
-          ${
-            data.metadata?.subtitle
-              ? `<div class="subtitle">${escapeHtml(data.metadata.subtitle)}</div>`
-              : ''
-          }
-        </div>
-        <div class="stats">
-          <div class="stat-box">
-            <div class="stat-val">${uniqueCourses}</div>
-            <div class="stat-lbl">مواد دراسية</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val">${sorted.length}</div>
-            <div class="stat-lbl">جلسات أسبوعية</div>
-          </div>
-        </div>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>اليوم</th>
-            <th>الوقت</th>
-            <th>المادة</th>
-            <th class="center">النوع</th>
-            <th class="center">القاعة</th>
-            <th class="center">الطابق</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rowsHtml}
-        </tbody>
-      </table>
-    </div>
-
-    <div class="footer">
+  <main${sessions.length > 12 ? ' class="compact"' : ''}>
+    <header>
       <div>
-        <strong>أيام بدون محاضرات:</strong> ${
-          offDays.length > 0 ? escapeHtml(offDays.join('، ')) : 'لا يوجد'
-        }
+        ${semester ? `<div class="semester">${semester}</div>` : ''}
+        <h1 dir="auto">${title}</h1>
+        ${subtitle ? `<div class="subtitle" dir="auto">${escapeHtml(subtitle)}</div>` : ''}
       </div>
-      <div class="legend">
-        <strong>دليل الطوابق:</strong> ${legend}
-      </div>
-    </div>
-  </div>
+      <dl>
+        <div><dd>${countFormat.format(courseCount)}</dd><dt>مواد دراسية</dt></div>
+        <div><dd>${countFormat.format(sessions.length)}</dd><dt>محاضرات أسبوعية</dt></div>
+      </dl>
+    </header>
+    <table aria-label="المحاضرات الأسبوعية">
+      <colgroup><col class="time-column"><col class="course-column"><col class="location-column"></colgroup>
+      <thead><tr><th scope="col">الوقت (24 ساعة)</th><th scope="col">المادة</th><th scope="col">القاعة والطابق</th></tr></thead>
+      ${tableRows}
+    </table>
+    ${offDays.length || floorLegend ? `
+      <footer>
+        ${offDays.length ? `<div class="off-days"><strong>أيام بلا محاضرات</strong> ${escapeHtml(offDays.join('، '))}</div>` : ''}
+        ${floorLegend ? `<div class="legend"><strong>دليل الطوابق</strong>${floorLegend}</div>` : ''}
+      </footer>
+    ` : ''}
+  </main>
 </body>
 </html>`;
 }
 
 export async function renderScheduleVectorPdf(payload: PdfRequestPayload): Promise<Buffer> {
-  const browser = await getBrowser();
-  const page = await browser.newPage();
+  const page = await (await getBrowser()).newPage();
   try {
-    const html = buildSwissScheduleHtml(payload);
-    // On Vercel serverless Linux without default Arabic system fonts, wait up to 4s for Google Fonts IBM Plex Sans Arabic!
-    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 6000 }).catch(() => {});
-    await Promise.race([
-      page.evaluate(() => (document.fonts ? document.fonts.ready : Promise.resolve())),
-      new Promise((resolve) => setTimeout(resolve, 2500)),
-    ]);
-    const pdfUint8 = await page.pdf({
-      format: 'A4',
-      printBackground: true,
+    await page.setContent(buildScheduleHtml(payload), { waitUntil: 'load' });
+    return Buffer.from(await page.pdf({
       preferCSSPageSize: true,
-      pageRanges: '1',
-    });
-    return Buffer.from(pdfUint8);
+      printBackground: true,
+      waitForFonts: true,
+    }));
   } finally {
     await page.close().catch(() => {});
   }

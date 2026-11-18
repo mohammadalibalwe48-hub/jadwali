@@ -5,7 +5,6 @@ import {
   FileText,
   SlidersHorizontal,
   Layers,
-  Share2,
   Loader2,
   ArrowUpLeft,
   X,
@@ -19,7 +18,8 @@ import {
   type ScheduleMetadata,
 } from './types';
 import { DEFAULT_FLOOR_RULES, detectFloorFromRoom } from './utils/floorMapper';
-import { generateVectorPdfFile, uploadAndExtractSchedule } from './services/clientApi';
+import { uploadAndExtractSchedule } from './services/clientApi';
+import { PdfExportDialog } from './components/PdfExportDialog';
 import { ImportReview } from './components/ImportReview';
 import { SessionEditorModal } from './components/SessionEditorModal';
 import { FloorRulesModal } from './components/FloorRulesModal';
@@ -81,8 +81,7 @@ export function App() {
     text: string;
   } | null>(null);
 
-  const [isExporting, setIsExporting] = useState(false);
-  const [readyPdf, setReadyPdf] = useState<{ file: File; url: string } | null>(null);
+  const [isPdfOpen, setIsPdfOpen] = useState(false);
 
   // Modals
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -143,14 +142,12 @@ export function App() {
     setSessions((previous) => [...previous, ...additions.filter((incoming) =>
       !previous.some((saved) => isSameMeeting(saved, incoming)))]);
     setScan(null);
-    setReadyPdf(null);
     setSelectedDay('الكل');
     setStatusToast({ kind: 'info', text: additions.length
       ? `تمت إضافة ${additions.length} محاضرات للجدول.` : 'المحاضرات المحدّدة موجودة مسبقاً في الجدول.' });
   };
 
   const handleSaveSession = (updated: LectureSession) => {
-    setReadyPdf(null);
     setSessions((prev) => {
       const exists = prev.some((s) => s.id === updated.id);
       const next = exists ? prev.map((s) => (s.id === updated.id ? updated : s)) : [...prev, updated];
@@ -163,12 +160,10 @@ export function App() {
   };
 
   const handleDeleteSession = (id: string) => {
-    setReadyPdf(null);
     setSessions((prev) => prev.filter((s) => s.id !== id));
   };
 
   const handleUpdateFloorRules = (newRules: FloorRule[]) => {
-    setReadyPdf(null);
     setFloorRules(newRules);
     setSessions((prev) =>
       prev.map((s) =>
@@ -183,51 +178,7 @@ export function App() {
     setSessions([]);
     setMetadata(DEFAULT_META);
     setSelectedDay('الكل');
-    setReadyPdf(null);
     setStatusToast(null);
-  };
-
-  const handleExportPdf = async () => {
-    if (sessions.length === 0 || isExporting) return;
-    setIsExporting(true);
-    setStatusToast(null);
-
-    try {
-      if (readyPdf?.url) URL.revokeObjectURL(readyPdf.url);
-      const generated = await generateVectorPdfFile(metadata, sessions, floorRules);
-      setReadyPdf({ file: generated.file, url: generated.url });
-
-      // Trigger standard browser download immediately
-      const link = document.createElement('a');
-      link.href = generated.url;
-      link.download = 'schedule.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err: any) {
-      setStatusToast({
-        kind: 'error',
-        text: err?.message || 'تعذّر تصدير ملف PDF.',
-      });
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleShareOrOpenPdf = async () => {
-    if (!readyPdf) return;
-    try {
-      if (navigator.canShare && navigator.canShare({ files: [readyPdf.file] })) {
-        await navigator.share({
-          files: [readyPdf.file],
-          title: metadata.title || 'الجدول الدراسي',
-        });
-        return;
-      }
-    } catch {
-      // User cancelled share or unsupported; fall back to opening PDF tab
-    }
-    window.open(readyPdf.url, '_blank', 'noopener,noreferrer');
   };
 
   const sortedSessions = [...sessions].sort((a, b) => {
@@ -711,42 +662,14 @@ export function App() {
       {sortedSessions.length > 0 && (
         <div className="fixed bottom-0 inset-x-0 z-30 pointer-events-none pb-[max(1rem,env(safe-area-inset-bottom))] px-4">
           <div className="max-w-md mx-auto pointer-events-auto space-y-2">
-            {readyPdf && (
-              <div className="animate-sheet-up bg-white border border-[#DFDDD4] rounded-2xl px-4 py-2.5 shadow-lg flex items-center justify-between gap-3">
-                <span className="text-xs font-bold text-[#141413]">ملف الـ PDF جاهز</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleShareOrOpenPdf}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#141413] text-white text-xs font-bold cursor-pointer"
-                  >
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span>فتح / مشاركة</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setReadyPdf(null)}
-                    className="p-1 text-[#6B6962] cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
             <div className="bg-[#141413] text-white rounded-full p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.18)] flex items-center gap-1.5">
               <button
                 type="button"
-                disabled={isExporting}
-                onClick={handleExportPdf}
-                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-full bg-white text-[#141413] text-xs font-bold hover:bg-[#F5F4EF] active:scale-[0.98] disabled:opacity-60 transition cursor-pointer"
+                onClick={() => setIsPdfOpen(true)}
+                className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-full bg-white text-[#141413] text-xs font-bold hover:bg-[#F5F4EF] active:scale-[0.98] transition cursor-pointer"
               >
-                {isExporting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <FileText className="w-4 h-4" />
-                )}
-                <span>{isExporting ? 'جاري التجهيز...' : 'تصدير PDF (صفحة واحدة)'}</span>
+                <FileText className="w-4 h-4" />
+                <span>تصدير PDF</span>
               </button>
 
               <button
@@ -782,6 +705,8 @@ export function App() {
       )}
 
       {/* Modals */}
+      {isPdfOpen && <PdfExportDialog metadata={metadata} sessions={sessions} floorRules={floorRules}
+        onClose={() => setIsPdfOpen(false)} />}
       {scan && <ImportReview
         sessions={scan.sessions}
         notices={scan.notices}
