@@ -1,71 +1,38 @@
 import {
   DAYS_ORDER,
-  type DayOfWeek,
+  isSameMeeting,
   type FloorRule,
   type LectureSession,
   type ScheduleMetadata,
 } from '../types';
 import { cleanRoomCode, detectFloorFromRoom } from '../utils/floorMapper';
-import { distinctMeetings } from '../ocr/scheduleOcrParser';
-import type { VisionOptions } from '../ocr/visionSettings';
 import { askVision } from './visionApi';
-import { runPureBrowserOcr } from '../ocr/browserOcr';
-
-function normalizeDay(raw: string): DayOfWeek {
-  const s = (raw || '').trim();
-  if (s.includes('سبت') || /sat/i.test(s)) return 'السبت';
-  if (s.includes('أحد') || s.includes('احد') || /sun/i.test(s)) return 'الأحد';
-  if (s.includes('اثنين') || s.includes('إثنين') || /mon/i.test(s)) return 'الإثنين';
-  if (s.includes('ثلاثاء') || /tue/i.test(s)) return 'الثلاثاء';
-  if (s.includes('أربعاء') || s.includes('اربعاء') || /wed/i.test(s)) return 'الأربعاء';
-  if (s.includes('خميس') || /thu/i.test(s)) return 'الخميس';
-  if (s.includes('جمعة') || s.includes('جمعه') || /fri/i.test(s)) return 'الجمعة';
-  return DAYS_ORDER.find((d) => d === s) || 'السبت';
-}
 
 export async function uploadAndExtractSchedule(
   files: File[],
-  floorRules: FloorRule[],
-  vision?: VisionOptions
+  floorRules: FloorRule[]
 ): Promise<{ sessions: LectureSession[]; notices: string[] }> {
-  const result = vision ? await askVision(files, vision) : await runPureBrowserOcr(files);
-  const rawList = distinctMeetings(result.sessions);
-
-  const sessions: LectureSession[] = rawList.map((item, idx) => {
-    const { room, hintedType } = cleanRoomCode(String(item.room || ''));
-    const rawType = String(item.type || '');
-    const type: 'نظري' | 'عملي' =
-      rawType.includes('عمل') || /^p|lab/i.test(rawType)
-        ? 'عملي'
-        : rawType.includes('نظر') || /^t/i.test(rawType)
-        ? 'نظري'
-        : hintedType || 'نظري';
-
+  const result = await askVision(files);
+  const sessions: LectureSession[] = [];
+  for (const item of result.sessions) {
+    const { room } = cleanRoomCode(item.room);
     const finalRoom = room || '—';
-    return {
-      id: `s-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
-      day: normalizeDay(item.day),
-      startTime: item.startTime || '10:00',
-      endTime: item.endTime || '11:30',
-      courseName: String(item.courseName || 'محاضرة جامعية').trim(),
-      courseCode: item.courseCode ? String(item.courseCode).trim().toUpperCase() : '',
-      type,
+    const session: LectureSession = {
+      ...item,
+      id: crypto.randomUUID(),
+      courseCode: item.courseCode?.trim().toUpperCase(),
       room: finalRoom,
       floor: finalRoom === '—' ? '—' : detectFloorFromRoom(finalRoom, floorRules),
       floorAuto: true,
     };
-  });
+    if (!sessions.some((other) => isSameMeeting(other, session))) sessions.push(session);
+  }
 
   sessions.sort((a, b) => {
-    const d = DAYS_ORDER.indexOf(a.day) - DAYS_ORDER.indexOf(b.day);
-    if (d !== 0) return d;
-    return a.startTime.localeCompare(b.startTime);
+    const day = DAYS_ORDER.indexOf(a.day) - DAYS_ORDER.indexOf(b.day);
+    return day || a.startTime.localeCompare(b.startTime);
   });
-
-  return {
-    sessions,
-    notices: result.notices,
-  };
+  return { sessions, notices: result.notices };
 }
 
 export async function generateVectorPdfFile(

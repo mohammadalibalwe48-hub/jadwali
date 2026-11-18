@@ -133,17 +133,40 @@ const browser = await puppeteer.launch({
 const directory = await mkdtemp(join(tmpdir(),'jadwali-import-'));
 const page = await browser.newPage();
 await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
-const errors = [];
-let uploadsToVision = 0;
-page.on('request', (request) => {
-  if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/vision') uploadsToVision++;
-});
 await page.evaluateOnNewDocument(() => localStorage.clear());
+const errors = [];
+let scanRequests = 0;
+let navigation = 0;
+let expectedImageCount = 1;
+let scanResponse = { sessions: [], issues: [] };
+let scanStatus = 200;
+await page.setRequestInterception(true);
+page.on('request', async (request) => {
+  if (new URL(request.url()).pathname !== '/api/vision') return request.continue();
+  scanRequests++;
+  assert.equal(request.method(), 'POST');
+  assert.equal(request.headers().authorization, undefined);
+  const body = JSON.parse(request.postData());
+  assert.deepEqual(Object.keys(body), ['images']);
+  assert.equal(body.images.length, expectedImageCount);
+  assert.ok(body.images.every((image) => image.startsWith('data:image/jpeg;base64,')));
+  await request.respond({ status: scanStatus, contentType: 'application/json', body: JSON.stringify(scanResponse) });
+});
+
+const scanMeetings = (rows) => ({
+  sessions: rows.map(([day, title, startTime, endTime, room, practical]) => ({
+    day: days[day], courseName: titles[title], startTime, endTime, room, type: practical ? 'عملي' : 'نظري',
+  })),
+  issues: [],
+});
+
 page.on('pageerror', (error) => errors.push(error.message));
 
 async function upload(files, keepReview = false) {
   if (!keepReview) {
-    await page.goto(process.env.JADWALI_TEST_URL ?? 'http://localhost:5173');
+    const url = new URL(process.env.JADWALI_TEST_URL ?? 'http://localhost:5173');
+    url.searchParams.set('test', String(++navigation));
+    await page.goto(url.toString());
   }
   const selector = keepReview ? 'dialog input[type=file]' : 'input[type=file]';
   const input = await page.waitForSelector(selector);
@@ -159,6 +182,7 @@ async function importMeetings(expected) {
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.jadwali_user_sessions_v2).length), 0);
   const summary = await page.$eval('dialog', dialog => dialog.innerText);
   assert.equal(review, expected.length, summary);
+  assert.equal(await page.$('dialog input[type=password]'), null);
   await page.evaluate(() => Array.from(document.querySelectorAll('dialog button')).find(button => button.textContent.trim()==='إضافة المحدّد').click());
   await page.waitForFunction((n) => JSON.parse(localStorage.jadwali_user_sessions_v2).length === n, {}, expected.length);
   const actual = await page.evaluate(() => JSON.parse(localStorage.jadwali_user_sessions_v2).map(item =>
@@ -172,9 +196,10 @@ try {
   for (const [index, rows] of schedules.entries()) {
     const fixture = join(directory,`weekly-${index}.png`);
     await writeFile(fixture, Buffer.from(await page.evaluate(renderWeekly, rows, titles, days, index),'base64'));
+    scanResponse = scanMeetings(rows);
     await upload([fixture]);
     await importMeetings(rows);
-    console.log(`Weekly schedule ${index+1} passed (${rows.length} meetings)`);
+    console.log(`Weekly review ${index+1} passed (${rows.length} mocked meetings)`);
   }
 
   const portal = [];
@@ -183,13 +208,25 @@ try {
     await writeFile(path,Buffer.from(await page.evaluate(renderPortal, part, titles, days),'base64'));
     portal.push(path);
   }
+  expectedImageCount = 3;
+  scanResponse = { sessions: [], issues: ['missing_catalog'] };
   await upload(portal.slice(1));
   assert.equal(await page.$$eval('dialog input[type=checkbox]', inputs => inputs.length), 0);
-  assert.match(await page.$eval('dialog', dialog => dialog.innerText), /أرفق لقطة عمود أسماء/);
+  assert.match(await page.$eval('dialog', dialog => dialog.innerText), /أرفق لقطة تظهر أسماء/);
+
+  expectedImageCount = 4;
+  scanStatus = 429;
+  scanResponse = { error: 'قارئ الصور مشغول' };
   await upload([portal[0]], true);
+  assert.match(await page.$eval('dialog', dialog => dialog.innerText), /قارئ الصور مشغول/);
+
+  scanStatus = 200;
+  scanResponse = scanMeetings(schedules[2]);
+  await page.evaluate(() => Array.from(document.querySelectorAll('dialog button')).find(button => button.textContent.trim()==='أعد القراءة').click());
+  await page.waitForFunction(() => document.querySelectorAll('dialog input[type=checkbox]').length === 7);
   await importMeetings(schedules[2]);
-  console.log('Split portal schedule passed (7 meetings, overlapping images and missing catalog)');
-  assert.equal(uploadsToVision, 0, 'Local imports should never send photos to the vision endpoint');
+  assert.equal(scanRequests, 6);
+  console.log('Split screenshot upload, missing catalog, and retry passed.');
   assert.deepEqual(errors,[]);
 } finally {
   await browser.close();
