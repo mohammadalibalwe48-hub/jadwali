@@ -55,7 +55,7 @@ export function InstallDialog({ installation, onClose }: { installation: ReturnT
           <p><strong>Chrome</strong><br />افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».</p>
         </div>
       </>}
-      <p className="text-xs leading-relaxed text-[#5F5D55]">{installation.offlineReady
+      <p className="text-xs leading-relaxed text-[var(--muted)]">{installation.offlineReady
         ? 'جدولك المحفوظ متاح دون إنترنت في هذا المتصفح. افتح النسخة المثبّتة مرة وأنت متصل لتجهيزها.'
         : 'افتح جدولي مرة وأنت متصل حتى يصبح جدولك جاهزاً للعمل دون إنترنت.'}</p>
     </ToolDialog>

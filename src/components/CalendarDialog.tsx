@@ -29,7 +29,7 @@ export function CalendarDialog({ sessions, onClose }: { sessions: LectureSession
 
   return (
     <ToolDialog title="تصدير إلى التقويم" onClose={onClose}>
-      <p className="text-sm leading-relaxed text-[#5F5D55]">تُصدّر المحاضرات أسبوعياً بين التاريخين، بالتوقيت المحلي لتقويمك.</p>
+      <p className="text-sm leading-relaxed text-[var(--muted)]">تُصدّر المحاضرات أسبوعياً بين التاريخين، بالتوقيت المحلي لتقويمك.</p>
       <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); exportCalendar(); }}>
         <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
           <label className="grid min-w-0 gap-1 text-xs font-bold">بداية الفصل
@@ -49,7 +49,7 @@ export function CalendarDialog({ sessions, onClose }: { sessions: LectureSession
         {error && <p className="text-xs text-red-800" role="alert">{error}</p>}
         <button className={primaryStyle} disabled={!validSemester(from, through)}><CalendarDays size={16} /> تنزيل ملف التقويم (.ics)</button>
       </form>
-      <div className="rounded-xl bg-white p-3 text-xs leading-relaxed text-[#5F5D55]">
+      <div className="rounded-xl bg-white p-3 text-xs leading-relaxed text-[var(--muted)]">
         <p>في تقويم Apple على Mac، افتح الملف وحدّد التقويم. على iPhone، يمكنك فتح الملف كمرفق في تطبيق البريد ثم إضافة المحاضرات. في Google Calendar على الكمبيوتر، اختر الإعدادات ثم الاستيراد والتصدير. في Outlook، اختر إضافة تقويم ثم التحميل من ملف. يمكنك ضبط التذكيرات من تطبيق التقويم بعد الاستيراد.</p>
       </div>
     </ToolDialog>

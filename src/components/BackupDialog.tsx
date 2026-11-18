@@ -14,15 +14,15 @@ export function BackupDialog({ sync, hasData, onClose }: { sync: ReturnType<type
   return (
     <ToolDialog title="النسخ الاحتياطي والمزامنة" onClose={onClose}>
       {sync.code ? <>
-        <p className="text-sm leading-relaxed text-[#5F5D55]">جدولك وحضورك وإعدادات الطوابق تُشفّر قبل رفعها. لربط هاتف أو كمبيوتر، افتح جدولي عليه وأدخل رمز الاسترداد.</p>
-        <div className="space-y-2 rounded-xl border border-[#DCD9CF] bg-white p-3">
+        <p className="text-sm leading-relaxed text-[var(--muted)]">جدولك وحضورك وإعدادات الطوابق تُشفّر قبل رفعها. لربط هاتف أو كمبيوتر، افتح جدولي عليه وأدخل رمز الاسترداد.</p>
+        <div className="space-y-2 rounded-xl border border-[var(--line)] bg-white p-3">
           <button type="button" className={secondaryStyle} onClick={() => setReveal(!reveal)}>{reveal ? 'إخفاء الرمز' : 'إظهار رمز الاسترداد'}</button>
           {reveal && <>
             <input aria-label="رمزك للاسترداد" dir="ltr" type="text" value={sync.code} readOnly autoComplete="off" className={`${fieldStyle} font-mono-num`} onFocus={(event) => event.target.select()} />
             <button type="button" className={secondaryStyle} onClick={async () => {
               try { await navigator.clipboard.writeText(sync.code!); setCopied(true); } catch { setCopied(false); }
             }}><Copy size={15} /> {copied ? 'تم النسخ' : 'نسخ الرمز'}</button>
-            <p className="text-xs text-[#5F5D55]">احتفظ بالرمز في مكان آمن. يحتاج إليه أي جهاز يفتح النسخة، ولا يمكن استعادته إذا فقدته.</p>
+            <p className="text-xs text-[var(--muted)]">احتفظ بالرمز في مكان آمن. يحتاج إليه أي جهاز يفتح النسخة، ولا يمكن استعادته إذا فقدته.</p>
           </>}
         </div>
         {sync.conflict && <div className="space-y-2 rounded-xl border border-[#DEC080] bg-[#FAECCC] p-3">
@@ -44,9 +44,9 @@ export function BackupDialog({ sync, hasData, onClose }: { sync: ReturnType<type
           </div>
         </div> : <button type="button" className="text-xs font-semibold text-red-800 underline" onClick={() => setConfirmDelete(true)}>حذف النسخة السحابية</button>}
       </> : <>
-        <p className="text-sm leading-relaxed text-[#5F5D55]">احفظ نسخة مشفّرة من جدولك وحضورك وإعدادات الطوابق، أو استعد نسخة أنشأتها على جهاز آخر.</p>
+        <p className="text-sm leading-relaxed text-[var(--muted)]">احفظ نسخة مشفّرة من جدولك وحضورك وإعدادات الطوابق، أو استعد نسخة أنشأتها على جهاز آخر.</p>
         <button type="button" className={primaryStyle} disabled={busy} onClick={() => void sync.create()}><Cloud size={16} /> تفعيل المزامنة</button>
-        <form className="space-y-3 border-t border-[#E2DFD7] pt-4" onSubmit={(event) => {
+        <form className="space-y-3 border-t border-[var(--line)] pt-4" onSubmit={(event) => {
           event.preventDefault();
           if (!hasData || replace) void sync.connect(input.trim());
         }}>
