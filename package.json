@@ -9,10 +9,12 @@
     "preview": "vite preview",
     "test:import": "node tests/import-schedules.mjs",
     "test:vision": "node tests/vision-api.mjs",
-    "test:pdf": "node tests/pdf-export.mjs"
+    "test:pdf": "node tests/pdf-export.mjs",
+    "test:student-tools": "node tests/student-tools.mjs"
   },
   "dependencies": {
     "@sparticuz/chromium": "^153.0.0",
+    "@vercel/blob": "^2.9.0",
     "ai": "^6.0.333",
     "html-to-image": "^1.11.13",
     "jspdf": "^3.0.1",
