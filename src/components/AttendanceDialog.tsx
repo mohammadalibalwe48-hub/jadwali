@@ -42,14 +42,14 @@ export function AttendanceDialog({ sessions, attendance, onChange, onClose }: {
       {meetings.map((session) => {
         const current = attendance.records.find((record) => record.sessionId === session.id && record.date === date)?.mark;
         return (
-          <div key={session.id} className="space-y-2 rounded-xl border border-[var(--line)] bg-white p-3">
+          <div key={session.id} className="space-y-2 rounded-md border border-[var(--line)] bg-white p-3">
             <div className="flex flex-wrap items-baseline justify-between gap-1.5 text-sm">
               <span className="font-bold">{session.courseName} <span className="text-xs font-medium text-[var(--muted)]">· {session.type}</span></span>
               <bdi className="font-mono-num text-xs">{session.startTime} – {session.endTime}</bdi>
             </div>
             <div role="group" aria-label={session.courseName} className="grid grid-cols-3 gap-1.5">
               {marks.map((mark) => <button type="button" key={mark.value} aria-pressed={current === mark.value}
-                className={`rounded-lg border px-1 py-2 text-xs font-bold ${current === mark.value ? mark.active : 'border-[var(--line)] bg-[var(--soft)]'}`}
+                className={`rounded-md border px-1 py-2 text-xs font-bold ${current === mark.value ? mark.active : 'border-[var(--line)] bg-[var(--soft)]'}`}
                 onClick={() => onChange((previous) => setMark(previous, session, date, mark.value))}>{mark.label}</button>)}
             </div>
           </div>
@@ -58,7 +58,7 @@ export function AttendanceDialog({ sessions, attendance, onChange, onClose }: {
       {summary.length > 0 && <section className="space-y-2 border-t border-[var(--line)] pt-4">
         <h3 className="text-sm font-bold">الغياب حسب المادة</h3>
         <p className="text-xs text-[var(--muted)]">حدّد الغيابات المسموحة لكل مادة. يُسجّل التأخّر بشكل منفصل.</p>
-        {summary.map((course) => <div key={course.key} className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl bg-white p-3">
+        {summary.map((course) => <div key={course.key} className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-white p-3">
           <div className="space-y-1">
             <p className="text-sm font-bold">{course.name}</p>
             <p className="text-xs text-[var(--muted)]">{course.present} حضور · {course.late} تأخّر · {course.missed} غياب</p>

@@ -40,7 +40,7 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
   return (
     <ToolDialog title="دليل رموز الطوابق" onClose={onClose}>
       <p className="dialog-note">يُستخدم الرمز الأول للقاعة لتحديد طابقها تلقائياً.</p>
-      <div className="divide-y divide-[var(--line)] border border-[var(--line)] rounded-2xl bg-[var(--soft)]">
+      <div className="divide-y divide-[var(--line)] border border-[var(--line)] rounded-md bg-[var(--soft)]">
         {draftRules.map((rule) => (
           <div
             key={rule.id}
@@ -49,7 +49,7 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
             <div className="flex items-center gap-3">
               <span
                 dir="ltr"
-                className="inline-flex items-center justify-center min-w-11 px-2.5 py-1 rounded-lg bg-white border border-[var(--line)] text-[var(--ink)] font-mono-num font-bold text-xs"
+                className="inline-flex items-center justify-center min-w-11 px-2.5 py-1 rounded-md bg-white border border-[var(--line)] text-[var(--ink)] font-mono-num font-bold text-xs"
               >
                 {rule.prefix}
               </span>
@@ -63,7 +63,7 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
             <button
               type="button" aria-label={`حذف قاعدة ${rule.prefix}`}
               onClick={() => setDraftRules((prev) => prev.filter((r) => r.id !== rule.id))}
-              className="p-1.5 text-[var(--muted)] hover:text-[#B42318] rounded-lg transition cursor-pointer"
+              className="p-1.5 text-[var(--muted)] hover:text-[#B42318] rounded-md transition cursor-pointer"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -80,7 +80,7 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
             placeholder="T"
             value={newPrefix}
             onChange={(e) => setNewPrefix(e.target.value)}
-            className="w-full rounded-xl bg-[var(--soft)] border border-[var(--line)] px-3 py-2 text-sm font-mono-num font-bold focus:bg-white focus:border-[var(--ink)] focus:outline-none"
+            className="w-full rounded-md bg-[var(--soft)] border border-[var(--line)] px-3 py-2 text-sm font-mono-num font-bold focus:bg-white focus:border-[var(--ink)] focus:outline-none"
           />
         </div>
         <div className="flex-1">
@@ -90,12 +90,12 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
             placeholder="الثالث"
             value={newFloor}
             onChange={(e) => setNewFloor(e.target.value)}
-            className="w-full rounded-xl bg-[var(--soft)] border border-[var(--line)] px-3 py-2 text-sm font-semibold focus:bg-white focus:border-[var(--ink)] focus:outline-none"
+            className="w-full rounded-md bg-[var(--soft)] border border-[var(--line)] px-3 py-2 text-sm font-semibold focus:bg-white focus:border-[var(--ink)] focus:outline-none"
           />
         </div>
         <button
           type="submit" aria-label="إضافة قاعدة"
-          className="p-2.5 rounded-xl bg-[var(--soft)] border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--lavender)] transition cursor-pointer"
+          className="p-2.5 rounded-md bg-[var(--soft)] border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--hover)] transition cursor-pointer"
         >
           <Plus className="w-4 h-4" />
         </button>
@@ -116,7 +116,7 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
             onSaveRules(draftRules);
             onClose();
           }}
-          className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)] transition cursor-pointer"
+          className="px-5 py-2.5 rounded-md text-xs font-bold bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)] transition cursor-pointer"
         >
           تطبيق
         </button>

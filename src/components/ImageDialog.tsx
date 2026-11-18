@@ -51,7 +51,7 @@ export function ImageDialog({ sessions, metadata, onClose }: {
       </div>
       {wallpaper && <p className="text-xs text-[var(--muted)]">تترك الخلفية مساحة لساعة شاشة القفل. احفظ الصورة واخترها من إعدادات الخلفية.</p>}
       {selected ? <>
-        <img className="mx-auto max-h-[42dvh] rounded-xl border border-[var(--line)] object-contain" src={selected.url} width={1080} height={wallpaper ? 2340 : 1920} style={{ width: 'auto', height: 'auto' }} alt="معاينة صورة الجدول" />
+        <img className="mx-auto max-h-[42dvh] rounded-md border border-[var(--line)] object-contain" src={selected.url} width={1080} height={wallpaper ? 2340 : 1920} style={{ width: 'auto', height: 'auto' }} alt="معاينة صورة الجدول" />
         {pages.length > 1 && <div className="flex items-center justify-between gap-2 text-xs">
           <button type="button" className={secondaryStyle} disabled={page === 0} onClick={() => setPage(page - 1)}>السابق</button>
           <span>صورة {page + 1} من {pages.length}</span>

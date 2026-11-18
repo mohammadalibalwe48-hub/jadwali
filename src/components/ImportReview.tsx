@@ -30,14 +30,14 @@ export function ImportReview({ sessions, notices, busy, onClose, onAddImages, on
       </>
     }>
       {(notices.length > 0 || sessions.length === 0) && (
-        <div role="status" className="space-y-1 rounded-2xl bg-[var(--soft)] px-4 py-3 text-sm">
+        <div role="status" className="space-y-1 rounded-md bg-[var(--soft)] px-4 py-3 text-sm">
           {(notices.length ? notices : ['لم تظهر محاضرات كاملة. أضف صوراً أوضح للجدول.'])
             .map((notice) => <p key={notice}>{notice}</p>)}
         </div>
       )}
 
       {sessions.length > 0 && (
-        <div className="divide-y divide-[var(--line)] rounded-2xl border border-[var(--line)]">
+        <div className="divide-y divide-[var(--line)] rounded-md border border-[var(--line)]">
           {sessions.map((session) => (
             <label key={session.id} className="flex cursor-pointer items-center gap-3 px-3 py-2.5 text-sm">
               <input type="checkbox" disabled={busy} checked={!excluded.has(session.id)}

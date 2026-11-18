@@ -15,7 +15,7 @@ export function BackupDialog({ sync, hasData, onClose }: { sync: ReturnType<type
     <ToolDialog title="النسخ الاحتياطي والمزامنة" onClose={onClose}>
       {sync.code ? <>
         <p className="text-sm leading-relaxed text-[var(--muted)]">جدولك وحضورك وإعدادات الطوابق تُشفّر قبل رفعها. لربط هاتف أو كمبيوتر، افتح جدولي عليه وأدخل رمز الاسترداد.</p>
-        <div className="space-y-2 rounded-xl border border-[var(--line)] bg-white p-3">
+        <div className="space-y-2 rounded-md border border-[var(--line)] bg-white p-3">
           <button type="button" className={secondaryStyle} onClick={() => setReveal(!reveal)}>{reveal ? 'إخفاء الرمز' : 'إظهار رمز الاسترداد'}</button>
           {reveal && <>
             <input aria-label="رمزك للاسترداد" dir="ltr" type="text" value={sync.code} readOnly autoComplete="off" className={`${fieldStyle} font-mono-num`} onFocus={(event) => event.target.select()} />
@@ -25,7 +25,7 @@ export function BackupDialog({ sync, hasData, onClose }: { sync: ReturnType<type
             <p className="text-xs text-[var(--muted)]">احتفظ بالرمز في مكان آمن. يحتاج إليه أي جهاز يفتح النسخة، ولا يمكن استعادته إذا فقدته.</p>
           </>}
         </div>
-        {sync.conflict && <div className="space-y-2 rounded-xl border border-[#DEC080] bg-[#FAECCC] p-3">
+        {sync.conflict && <div className="space-y-2 rounded-md border border-[#DEC080] bg-[#FAECCC] p-3">
           <p className="text-sm">تغيّرت البيانات على هذا الجهاز وفي النسخة السحابية. اختر النسخة التي تريد الاحتفاظ بها.</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" className={primaryStyle} disabled={busy} onClick={() => void sync.resolve(false)}>الاحتفاظ ببيانات هذا الجهاز</button>
@@ -36,7 +36,7 @@ export function BackupDialog({ sync, hasData, onClose }: { sync: ReturnType<type
           <button type="button" className={primaryStyle} disabled={busy || !!sync.conflict} onClick={sync.synchronize}><RefreshCw size={16} /> مزامنة الآن</button>
           <button type="button" className={secondaryStyle} disabled={busy} onClick={() => { setConfirmDelete(false); sync.disconnect(); }}>فصل هذا الجهاز</button>
         </div>
-        {confirmDelete ? <div className="space-y-2 rounded-xl border border-[#E1AEAA] bg-[#FCE3E0] p-3">
+        {confirmDelete ? <div className="space-y-2 rounded-md border border-[#E1AEAA] bg-[#FCE3E0] p-3">
           <p className="text-xs leading-relaxed">سيُحذف النسخ الاحتياطي السحابي ويتوقف رمز الاسترداد عن العمل. تبقى البيانات المحفوظة على أجهزتك.</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" className={secondaryStyle + ' text-red-800'} disabled={busy} onClick={() => void sync.removeCloudCopy()}>حذف النسخة نهائياً</button>

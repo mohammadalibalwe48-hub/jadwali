@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { CalendarClock, Clock3, Layers, MapPin } from 'lucide-react';
 import type { LectureSession } from '../types';
 import { nextMeeting } from '../utils/semester';
 
@@ -30,19 +29,16 @@ export function NextClass({ sessions }: { sessions: LectureSession[] }) {
 
   return (
     <section className="next-class" aria-labelledby="next-class-title">
-      <div className="next-class-label">
-        <CalendarClock size={19} strokeWidth={1.9} aria-hidden="true" />
-        <h2 id="next-class-title">المحاضرة القادمة</h2>
-      </div>
-      <div className="next-class-course" dir="auto">{session.courseName}</div>
+      <h2 id="next-class-title">المحاضرة القادمة</h2>
+      <p className="next-class-subject" dir="auto">{session.courseName}</p>
       <div className="next-class-timing">
         <span>{date}</span><bdi>{session.startTime} – {session.endTime}</bdi>
       </div>
-      <div className="next-class-countdown"><Clock3 size={14} aria-hidden="true" />{minutes > 0 ? `بعد ${countdown}` : 'الآن'}</div>
       <dl className="next-class-location">
-        <div><dt><MapPin size={15} aria-hidden="true" />القاعة</dt><dd><bdi>{session.room || '—'}</bdi></dd></div>
-        <div><dt><Layers size={15} aria-hidden="true" />الطابق</dt><dd>{floor}</dd></div>
+        <div><dt>القاعة</dt><dd><bdi>{session.room || '—'}</bdi></dd></div>
+        <div><dt>الطابق</dt><dd>{floor}</dd></div>
       </dl>
+      <p className="next-class-countdown">{minutes > 0 ? `بعد ${countdown}` : 'الآن'}</p>
     </section>
   );
 }
