@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createHash } from 'node:crypto';
 import { del, get, put, BlobPreconditionFailedError } from '@vercel/blob';
-import { envelopeSchema, MAX_BACKUP_BYTES } from '../src/services/backup.js';
+import { envelopeSchema, MAX_BACKUP_BYTES } from '../src/services/backupProtocol.js';
 
 const etagPattern = /^"[A-Za-z0-9_:-]{1,128}"$/;
 
