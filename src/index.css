@@ -1,46 +1,37 @@
 @import "tailwindcss";
+@import "./workspace.css";
+
+@font-face {
+  font-family: Alexandria;
+  src: url('./assets/fonts/alexandria-arabic.woff2') format('woff2');
+  font-weight: 400 800;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: Alexandria;
+  src: url('./assets/fonts/alexandria-latin.woff2') format('woff2');
+  font-weight: 400 800;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 @layer base {
   html {
-    font-family: 'Readex Pro', system-ui, -apple-system, sans-serif;
-    background-color: #F5F4EF;
-    color: #141413;
+    font-family: Alexandria, 'Jadwali Image', system-ui, sans-serif;
+    background-color: var(--page);
+    color: var(--ink);
     -webkit-tap-highlight-color: transparent;
   }
-
-  body {
-    margin: 0;
-    direction: rtl;
-    overflow-x: hidden;
-  }
+  body { margin: 0; }
+  button:not(:disabled), a[href] { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  ::selection { background: #dddaff; color: #22174f; }
 }
 
 .font-mono-num {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: Alexandria, ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-@keyframes sheetUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-sheet-up {
-  animation: sheetUp 0.24s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 
 @font-face {

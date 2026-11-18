@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import {
   DAYS_ORDER,
   type DayOfWeek,
@@ -7,10 +7,10 @@ import {
   type LectureSession,
   type SessionType,
 } from '../types';
+import { fieldStyle, primaryStyle, secondaryStyle, ToolDialog } from './ToolDialog';
 import { cleanRoomCode, detectFloorFromRoom } from '../utils/floorMapper';
 
 interface SessionEditorModalProps {
-  isOpen: boolean;
   session: LectureSession | null;
   floorRules: FloorRule[];
   defaultDay?: DayOfWeek;
@@ -27,8 +27,8 @@ const UNIVERSITY_SLOTS = [
   { label: '14:30 – 16:00', start: '14:30', end: '16:00' },
 ];
 
-const HOURS = Array.from({ length: 13 }, (_, i) => String(i + 8).padStart(2, '0'));
-const MINUTES = ['00', '15', '30', '45'];
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
 function splitTime(hhmm: string): [string, string] {
   const parts = (hhmm || '10:00').split(':');
@@ -38,7 +38,6 @@ function splitTime(hhmm: string): [string, string] {
 }
 
 export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
-  isOpen,
   session,
   floorRules,
   defaultDay = 'السبت',
@@ -46,41 +45,15 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
   onSave,
   onDelete,
 }) => {
-  const [day, setDay] = useState<DayOfWeek>(defaultDay);
-  const [startTime, setStartTime] = useState('10:00');
-  const [endTime, setEndTime] = useState('11:30');
-  const [courseName, setCourseName] = useState('');
-  const [courseCode, setCourseCode] = useState('');
-  const [type, setType] = useState<SessionType>('نظري');
-  const [room, setRoom] = useState('');
-  const [floor, setFloor] = useState('');
-  const [floorAuto, setFloorAuto] = useState(true);
-
-  useEffect(() => {
-    if (session) {
-      setDay(session.day);
-      setStartTime(session.startTime);
-      setEndTime(session.endTime);
-      setCourseName(session.courseName);
-      setCourseCode(session.courseCode || '');
-      setType(session.type);
-      setRoom(session.room === '—' ? '' : session.room);
-      setFloor(session.floor === '—' ? '' : session.floor);
-      setFloorAuto(session.floorAuto);
-    } else {
-      setDay(defaultDay);
-      setStartTime('10:00');
-      setEndTime('11:30');
-      setCourseName('');
-      setCourseCode('');
-      setType('نظري');
-      setRoom('');
-      setFloor('');
-      setFloorAuto(true);
-    }
-  }, [session, defaultDay, isOpen]);
-
-  if (!isOpen) return null;
+  const [day, setDay] = useState<DayOfWeek>(session?.day ?? defaultDay);
+  const [startTime, setStartTime] = useState(session?.startTime ?? '10:00');
+  const [endTime, setEndTime] = useState(session?.endTime ?? '11:30');
+  const [courseName, setCourseName] = useState(session?.courseName ?? '');
+  const [courseCode, setCourseCode] = useState(session?.courseCode ?? '');
+  const [type, setType] = useState<SessionType>(session?.type ?? 'نظري');
+  const [room, setRoom] = useState(session?.room === '—' ? '' : session?.room ?? '');
+  const [floor, setFloor] = useState(session?.floor === '—' ? '' : session?.floor ?? '');
+  const [floorAuto, setFloorAuto] = useState(session?.floorAuto ?? true);
 
   const [startH, startM] = splitTime(startTime);
   const [endH, endM] = splitTime(endTime);
@@ -122,268 +95,223 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#141413]/45 backdrop-blur-[2px]"
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="animate-sheet-up bg-white w-full sm:max-w-lg rounded-t-[26px] sm:rounded-[22px] border border-[#E6E4DC] shadow-2xl max-h-[92dvh] overflow-y-auto"
-      >
-        {/* Sheet Handle on Mobile */}
-        <div className="sm:hidden flex justify-center pt-2.5 pb-1">
-          <div className="w-10 h-1 rounded-full bg-[#D8D5CD]" />
-        </div>
-
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#ECEAE3] sticky top-0 bg-white z-10">
-          <h3 className="text-base font-bold text-[#141413]">
-            {session ? 'تعديل المحاضرة' : 'محاضرة جديدة'}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[#6B6962] hover:bg-[#F5F4EF] transition cursor-pointer"
-          >
-            <X className="w-4 h-4" />
+    <ToolDialog title={session ? 'تعديل المحاضرة' : 'محاضرة جديدة'} onClose={onClose} size="wide" footer={
+      <>
+        {session && onDelete ? (
+          <button type="button" className="button button-danger" onClick={() => { onDelete(session.id); onClose(); }}>
+            <Trash2 size={16} aria-hidden="true" /> حذف
           </button>
+        ) : <span />}
+        <div className="flex gap-2">
+          <button type="button" className={secondaryStyle} onClick={onClose}>إلغاء</button>
+          <button type="submit" form="session-editor-form" className={primaryStyle}>حفظ</button>
+        </div>
+      </>
+    }>
+      <form id="session-editor-form" onSubmit={handleSubmit} className="space-y-5">
+        {/* Course Name & Code */}
+        <div className="grid grid-cols-3 gap-2.5">
+          <div className="col-span-2">
+            <label htmlFor="editor-course" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">المادة</label>
+            <input id="editor-course"
+              type="text"
+              placeholder="مثلاً: تحليل رياضي 1"
+              value={courseName}
+              onChange={(e) => setCourseName(e.target.value)}
+              className={fieldStyle + ' font-semibold'}
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="editor-code" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">الرمز</label>
+            <input id="editor-code"
+              type="text"
+              dir="ltr"
+              placeholder="CEDC101"
+              value={courseCode}
+              onChange={(e) => setCourseCode(e.target.value.toUpperCase())}
+              className={fieldStyle + ' font-semibold font-mono-num text-left'}
+            />
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-5">
-          {/* Course Name & Code */}
-          <div className="grid grid-cols-3 gap-2.5">
-            <div className="col-span-2">
-              <label className="block text-xs font-semibold text-[#6B6962] mb-1.5">المادة</label>
-              <input
-                type="text"
-                placeholder="مثلاً: تحليل رياضي 1"
-                value={courseName}
-                onChange={(e) => setCourseName(e.target.value)}
-                className="w-full rounded-xl bg-[#FAF9F5] border border-[#E2DFD7] px-3.5 py-2.5 text-sm font-semibold text-[#141413] placeholder:text-[#A8A59D] focus:bg-white focus:border-[#141413] focus:outline-none transition"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-[#6B6962] mb-1.5">الرمز</label>
-              <input
-                type="text"
-                dir="ltr"
-                placeholder="CEDC101"
-                value={courseCode}
-                onChange={(e) => setCourseCode(e.target.value.toUpperCase())}
-                className="w-full rounded-xl bg-[#FAF9F5] border border-[#E2DFD7] px-3 py-2.5 text-sm font-mono-num font-semibold text-left text-[#141413] placeholder:text-[#A8A59D] focus:bg-white focus:border-[#141413] focus:outline-none transition"
-              />
-            </div>
+        {/* Day Pills */}
+        <div>
+          <p id="editor-day" className="block text-xs font-semibold text-[var(--muted)] mb-2">اليوم</p>
+          <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5" role="group" aria-labelledby="editor-day">
+            {DAYS_ORDER.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDay(d)}
+                aria-pressed={day === d}
+                className={`py-2 rounded-xl text-xs font-semibold transition cursor-pointer active:scale-[0.97] ${
+                  day === d
+                    ? 'bg-[var(--brand)] text-white'
+                    : 'bg-[var(--soft)] text-[var(--muted)] hover:bg-[var(--lavender)]'
+                }`}
+              >
+                {d}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* Day Pills */}
-          <div>
-            <label className="block text-xs font-semibold text-[#6B6962] mb-2">اليوم</label>
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
-              {DAYS_ORDER.map((d) => (
+        {/* Time Selection (Preset Pills + Clean 24h Selectors) */}
+        <div>
+          <p className="block text-xs font-semibold text-[var(--muted)] mb-2">الوقت</p>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {UNIVERSITY_SLOTS.map((slot) => {
+              const isSelected = startTime === slot.start && endTime === slot.end;
+              return (
                 <button
-                  key={d}
+                  key={slot.label}
                   type="button"
-                  onClick={() => setDay(d)}
-                  className={`py-2 rounded-xl text-xs font-semibold transition cursor-pointer active:scale-[0.97] ${
-                    day === d
-                      ? 'bg-[#141413] text-white'
-                      : 'bg-[#F5F4EF] text-[#3D3C38] hover:bg-[#EAE8E0]'
+                  dir="ltr"
+                  aria-pressed={isSelected}
+                  onClick={() => {
+                    setStartTime(slot.start);
+                    setEndTime(slot.end);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-mono-num font-semibold transition cursor-pointer ${
+                    isSelected
+                      ? 'bg-[var(--brand)] text-white'
+                      : 'bg-[var(--soft)] text-[var(--muted)] hover:bg-[var(--lavender)]'
                   }`}
                 >
-                  {d}
+                  {slot.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-[var(--soft)] border border-[var(--line)] rounded-xl p-2.5">
+              <span className="block text-[11px] font-medium text-[var(--muted)] mb-1">البداية</span>
+              <div className="flex items-center gap-1.5" dir="ltr">
+                <select
+                  value={startH} aria-label="ساعة البداية"
+                  onChange={(e) => setStartTime(`${e.target.value}:${startM}`)}
+                  className="flex-1 bg-white border border-[var(--line)] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                >
+                  {HOURS.map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
+                <span className="font-mono-num font-bold text-[var(--muted)]">:</span>
+                <select
+                  value={startM} aria-label="دقيقة البداية"
+                  onChange={(e) => setStartTime(`${startH}:${e.target.value}`)}
+                  className="flex-1 bg-white border border-[var(--line)] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                >
+                  {MINUTES.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-[var(--soft)] border border-[var(--line)] rounded-xl p-2.5">
+              <span className="block text-[11px] font-medium text-[var(--muted)] mb-1">النهاية</span>
+              <div className="flex items-center gap-1.5" dir="ltr">
+                <select
+                  value={endH} aria-label="ساعة النهاية"
+                  onChange={(e) => setEndTime(`${e.target.value}:${endM}`)}
+                  className="flex-1 bg-white border border-[var(--line)] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                >
+                  {HOURS.map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
+                <span className="font-mono-num font-bold text-[var(--muted)]">:</span>
+                <select
+                  value={endM} aria-label="دقيقة النهاية"
+                  onChange={(e) => setEndTime(`${endH}:${e.target.value}`)}
+                  className="flex-1 bg-white border border-[var(--line)] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                >
+                  {MINUTES.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Type + Room + Floor */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div>
+            <p id="editor-type" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">النوع</p>
+            <div className="grid grid-cols-2 gap-1.5 bg-[var(--soft)] p-1 rounded-xl" role="group" aria-labelledby="editor-type">
+              {(['نظري', 'عملي'] as SessionType[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setType(t)}
+                  aria-pressed={type === t}
+                  className={`py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    type === t
+                      ? 'bg-white text-[var(--ink)] shadow-2xs'
+                      : 'text-[var(--muted)] hover:text-[var(--ink)]'
+                  }`}
+                >
+                  {t}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Time Selection (Preset Pills + Clean 24h Selectors) */}
           <div>
-            <label className="block text-xs font-semibold text-[#6B6962] mb-2">الوقت</label>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {UNIVERSITY_SLOTS.map((slot) => {
-                const isSelected = startTime === slot.start && endTime === slot.end;
-                return (
-                  <button
-                    key={slot.label}
-                    type="button"
-                    dir="ltr"
-                    onClick={() => {
-                      setStartTime(slot.start);
-                      setEndTime(slot.end);
-                    }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-mono-num font-semibold transition cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#141413] text-white'
-                        : 'bg-[#F5F4EF] text-[#3D3C38] hover:bg-[#EAE8E0]'
-                    }`}
-                  >
-                    {slot.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="bg-[#FAF9F5] border border-[#E2DFD7] rounded-xl p-2.5">
-                <span className="block text-[11px] font-medium text-[#6B6962] mb-1">البداية</span>
-                <div className="flex items-center gap-1.5" dir="ltr">
-                  <select
-                    value={startH}
-                    onChange={(e) => setStartTime(`${e.target.value}:${startM}`)}
-                    className="flex-1 bg-white border border-[#E2DFD7] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[#141413]"
-                  >
-                    {HOURS.map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="font-mono-num font-bold text-[#6B6962]">:</span>
-                  <select
-                    value={startM}
-                    onChange={(e) => setStartTime(`${startH}:${e.target.value}`)}
-                    className="flex-1 bg-white border border-[#E2DFD7] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[#141413]"
-                  >
-                    {MINUTES.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="bg-[#FAF9F5] border border-[#E2DFD7] rounded-xl p-2.5">
-                <span className="block text-[11px] font-medium text-[#6B6962] mb-1">النهاية</span>
-                <div className="flex items-center gap-1.5" dir="ltr">
-                  <select
-                    value={endH}
-                    onChange={(e) => setEndTime(`${e.target.value}:${endM}`)}
-                    className="flex-1 bg-white border border-[#E2DFD7] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[#141413]"
-                  >
-                    {HOURS.map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="font-mono-num font-bold text-[#6B6962]">:</span>
-                  <select
-                    value={endM}
-                    onChange={(e) => setEndTime(`${endH}:${e.target.value}`)}
-                    className="flex-1 bg-white border border-[#E2DFD7] rounded-lg py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[#141413]"
-                  >
-                    {MINUTES.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
+            <label htmlFor="editor-room" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">القاعة</label>
+            <input id="editor-room"
+              type="text"
+              dir="auto"
+              placeholder="B-06 أو المدرّج"
+              value={room}
+              onChange={(e) => handleRoomChange(e.target.value)}
+              className={fieldStyle + ' font-semibold font-mono-num'}
+            />
           </div>
 
-          {/* Type + Room + Floor */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div>
-              <label className="block text-xs font-semibold text-[#6B6962] mb-1.5">النوع</label>
-              <div className="grid grid-cols-2 gap-1.5 bg-[#F5F4EF] p-1 rounded-xl">
-                {(['نظري', 'عملي'] as SessionType[]).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setType(t)}
-                    className={`py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                      type === t
-                        ? 'bg-white text-[#141413] shadow-2xs'
-                        : 'text-[#6B6962] hover:text-[#141413]'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#6B6962] mb-1.5">القاعة</label>
-              <input
-                type="text"
-                dir="auto"
-                placeholder="B-06 أو المدرّج"
-                value={room}
-                onChange={(e) => handleRoomChange(e.target.value)}
-                className="w-full rounded-xl bg-[#FAF9F5] border border-[#E2DFD7] px-3 py-2 text-sm font-mono-num font-bold text-[#141413] placeholder:font-sans placeholder:font-normal placeholder:text-[#A8A59D] focus:bg-white focus:border-[#141413] focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-[#6B6962]">الطابق</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = !floorAuto;
-                    setFloorAuto(next);
-                    if (next && room.trim()) {
-                      setFloor(detectFloorFromRoom(room, floorRules));
-                    }
-                  }}
-                  className="text-[11px] font-medium text-[#6B6962] underline cursor-pointer"
-                >
-                  {floorAuto ? 'تلقائي' : 'تعديل يدوي'}
-                </button>
-              </div>
-              <input
-                type="text"
-                placeholder="يُحدّد من القاعة"
-                value={floor}
-                onChange={(e) => {
-                  setFloorAuto(false);
-                  setFloor(e.target.value);
-                }}
-                className="w-full rounded-xl bg-[#FAF9F5] border border-[#E2DFD7] px-3 py-2 text-sm font-semibold text-[#141413] placeholder:font-normal placeholder:text-[#A8A59D] focus:bg-white focus:border-[#141413] focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Footer Buttons */}
-          <div className="flex items-center justify-between pt-2 gap-3 border-t border-[#ECEAE3]">
-            {session && onDelete ? (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label htmlFor="editor-floor" className="text-xs font-semibold text-[var(--muted)]">الطابق</label>
               <button
                 type="button"
                 onClick={() => {
-                  onDelete(session.id);
-                  onClose();
+                  const next = !floorAuto;
+                  setFloorAuto(next);
+                  if (next && room.trim()) {
+                    setFloor(detectFloorFromRoom(room, floorRules));
+                  }
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-[#B42318] bg-[#FEF3F2] hover:bg-[#FEE4E2] transition cursor-pointer"
+                className="text-[11px] font-medium text-[var(--muted)] underline cursor-pointer"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                حذف
-              </button>
-            ) : (
-              <div />
-            )}
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-[#6B6962] hover:bg-[#F5F4EF] transition cursor-pointer"
-              >
-                إلغاء
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2.5 rounded-xl text-xs font-bold bg-[#141413] text-white hover:bg-[#2A2927] active:scale-[0.98] transition cursor-pointer"
-              >
-                حفظ
+                {floorAuto ? 'تلقائي' : 'تعديل يدوي'}
               </button>
             </div>
+            <input id="editor-floor"
+              type="text"
+              placeholder="يُحدّد من القاعة"
+              value={floor}
+              onChange={(e) => {
+                setFloorAuto(false);
+                setFloor(e.target.value);
+              }}
+              className={fieldStyle + ' font-semibold'}
+            />
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+      </form>
+    </ToolDialog>
   );
 };

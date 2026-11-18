@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Clock3, Layers, MapPin } from 'lucide-react';
+import { CalendarClock, Clock3, Layers, MapPin } from 'lucide-react';
 import type { LectureSession } from '../types';
 import { nextMeeting } from '../utils/semester';
 
@@ -26,19 +26,23 @@ export function NextClass({ sessions }: { sessions: LectureSession[] }) {
   const date = offset === 0 ? 'اليوم' : offset === 1 ? 'غداً' : session.day;
   const countdown = [Math.floor(hours / 24), hours % 24, minutes % 60]
     .flatMap((value, index) => value ? [units[index].format(value)] : []).join(' و');
+  const floor = session.floor && session.floor !== '—' && session.floor !== 'غير محدّد' ? session.floor : '—';
 
   return (
-    <section className="mb-4 rounded-[22px] bg-[#173832] text-white px-4 py-4 sm:px-5 sm:py-5">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-[#D5F0E8]">
-        <h2 className="flex items-center gap-1.5"><Clock3 size={15} aria-hidden="true" /> المحاضرة القادمة</h2>
-        <span className="rounded-full bg-white/10 px-2.5 py-1">{minutes > 0 ? `بعد ${countdown}` : 'الآن'}</span>
+    <section className="next-class" aria-labelledby="next-class-title">
+      <div className="next-class-label">
+        <CalendarClock size={19} strokeWidth={1.9} aria-hidden="true" />
+        <h2 id="next-class-title">المحاضرة القادمة</h2>
       </div>
-      <p className="mt-2.5 text-lg sm:text-xl font-bold break-words">{session.courseName} <span className="text-xs font-medium text-[#D5F0E8]">· {session.type}</span></p>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
-        <span>{date} · <bdi className="font-mono-num">{session.startTime} – {session.endTime}</bdi></span>
-        <span className="flex items-center gap-1"><MapPin size={14} aria-hidden="true" /> القاعة <bdi>{session.room || '—'}</bdi></span>
-        <span className="flex items-center gap-1"><Layers size={14} aria-hidden="true" /> الطابق {session.floor || '—'}</span>
+      <div className="next-class-course" dir="auto">{session.courseName}</div>
+      <div className="next-class-timing">
+        <span>{date}</span><bdi>{session.startTime} – {session.endTime}</bdi>
       </div>
+      <div className="next-class-countdown"><Clock3 size={14} aria-hidden="true" />{minutes > 0 ? `بعد ${countdown}` : 'الآن'}</div>
+      <dl className="next-class-location">
+        <div><dt><MapPin size={15} aria-hidden="true" />القاعة</dt><dd><bdi>{session.room || '—'}</bdi></dd></div>
+        <div><dt><Layers size={15} aria-hidden="true" />الطابق</dt><dd>{floor}</dd></div>
+      </dl>
     </section>
   );
 }
