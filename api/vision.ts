@@ -108,6 +108,14 @@ async function scanWithQwen<T>(
   }
 }
 
+function normalizeEndTime(start: string, end: string): string {
+  const [startHour, startMinute] = start.split(':').map(Number);
+  const [endHour, endMinute] = end.split(':').map(Number);
+  if (start <= end || startHour < 8 || startHour > 12 || endHour < 1 || endHour > 4) return end;
+  const duration = (endHour + 12 - startHour) * 60 + endMinute - startMinute;
+  return duration > 0 && duration <= 360 ? `${endHour + 12}:${end.slice(3)}` : end;
+}
+
 function respond(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(body));
@@ -203,12 +211,13 @@ export default async function handler(req: IncomingMessage & { body?: unknown },
 
     const sessions = extracted.flatMap((meeting) => {
       const title = meeting.courseName?.trim();
-      if (!title || meeting.startTime >= meeting.endTime) {
+      const endTime = normalizeEndTime(meeting.startTime, meeting.endTime);
+      if (!title || meeting.startTime >= endTime) {
         issues.add('unreadable');
         return [];
       }
       return [{
-        ...meeting, courseName: title,
+        ...meeting, endTime, courseName: title,
         day: dayAliases[meeting.day] ?? meeting.day,
         courseCode: meeting.courseCode ?? undefined,
         room: meeting.room?.trim() || '—',

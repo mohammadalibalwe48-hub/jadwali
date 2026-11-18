@@ -76,6 +76,12 @@ try {
   assert.deepEqual(await post(multipleImages).then((response) => response.json()), { sessions: [], issues: ['missing_catalog'] });
   gatewayOutput = [{ ...expected, portalTables: [], sessions: [{ ...expected.sessions[0], endTime: '07:00' }] }];
   assert.deepEqual(await post(input).then((response) => response.json()), { sessions: [], issues: ['unreadable'] });
+  const noonMeeting = { ...expected.sessions[0], startTime: '11:30', endTime: '01:00' };
+  gatewayOutput = { sessions: [noonMeeting], issues: [] };
+  assert.deepEqual(await post(input).then((response) => response.json()), {
+    sessions: [{ ...noonMeeting, endTime: '13:00' }],
+    issues: [],
+  });
   gatewayOutput = (schema) => schema.properties.portalTables
     ? [{ sessions: [{ ...meeting, courseName: null, courseCode: null }], portalTables: [{ ...portalTables[0], meetings: [] }], issues: [] }]
     : { meetings: [{ ...meeting, row: 3, day: 'الاثنين' }] };
