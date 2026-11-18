@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DAYS_ORDER, type FloorRule, type LectureSession, type ScheduleMetadata } from '../types';
+import { envelopeSchema, MAX_BACKUP_BYTES, type Envelope } from './backupProtocol';
 import type { Attendance } from '../utils/attendance';
 
 export interface ScheduleBackup {
@@ -29,14 +30,6 @@ const backupSchema: z.ZodType<ScheduleBackup> = z.object({
     limits: z.record(text, z.number().int().min(0).max(100)),
   }),
 });
-
-export const MAX_BACKUP_BYTES = 512 * 1024;
-export const envelopeSchema = z.object({
-  version: z.literal(1),
-  iv: text.regex(/^[A-Za-z0-9_-]{16}$/),
-  data: text.min(22).max(MAX_BACKUP_BYTES - 128).regex(/^[A-Za-z0-9_-]+$/),
-}).strict();
-type Envelope = z.infer<typeof envelopeSchema>;
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
