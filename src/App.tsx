@@ -20,6 +20,8 @@ import {
 } from './types';
 import { DEFAULT_FLOOR_RULES, detectFloorFromRoom } from './utils/floorMapper';
 import { generateVectorPdfFile, uploadAndExtractSchedule } from './services/clientApi';
+import { ImportReview } from './components/ImportReview';
+import type { VisionOptions } from './ocr/visionSettings';
 import { SessionEditorModal } from './components/SessionEditorModal';
 import { FloorRulesModal } from './components/FloorRulesModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -74,6 +76,7 @@ export function App() {
 
   // Extraction & Export states
   const [isScanning, setIsScanning] = useState(false);
+  const [scan, setScan] = useState<{ files: File[]; sessions: LectureSession[]; notices: string[] } | null>(null);
   const [statusToast, setStatusToast] = useState<{
     kind: 'info' | 'error';
     text: string;
@@ -108,69 +111,42 @@ export function App() {
     const onPaste = (e: ClipboardEvent) => {
       if (!e.clipboardData?.files?.length) return;
       const imgs = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'));
-      if (imgs.length > 0) handleScanFiles(imgs);
+      if (imgs.length > 0) handleScanFiles(scan ? [...scan.files, ...imgs] : imgs);
     };
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
   });
 
-  const handleScanFiles = async (files: File[]) => {
+  const handleScanFiles = async (files: File[], vision?: VisionOptions) => {
     if (!files.length || scanInProgress.current) return;
     scanInProgress.current = true;
     setIsScanning(true);
     setStatusToast(null);
-    setReadyPdf(null);
-
     try {
-      const result = await uploadAndExtractSchedule(files, floorRules);
-      if (result.sessions.length === 0) {
-        setStatusToast({
-          kind: 'error',
-          text: 'لم يتم العثور على محاضرات واضحة في الصورة. جرّب لقطة أوضح أو أضفها يدوياً.',
-        });
-        return;
-      }
-
-      setSessions((prev) => {
-        // Merge cleanly without duplicates if adding extra screenshots
-        const combined = [...prev];
-        let added = 0;
-        for (const incoming of result.sessions) {
-          if (!combined.some((other) => isSameMeeting(other, incoming))) {
-            combined.push(incoming);
-            added++;
-          }
-        }
-        combined.sort((a, b) => {
-          const d = DAYS_ORDER.indexOf(a.day) - DAYS_ORDER.indexOf(b.day);
-          if (d !== 0) return d;
-          return a.startTime.localeCompare(b.startTime);
-        });
-
-        setStatusToast({
-          kind: 'info',
-          text:
-            prev.length === 0
-              ? `تم استخراج ${result.sessions.length} محاضرات. راجع الأوقات والقاعات قبل التصدير.`
-              : `تمت إضافة ${added} محاضرات جديدة للجدول.`,
-        });
-
-        return combined;
-      });
-
-      if (result.metadata.title && result.metadata.title !== DEFAULT_META.title) {
-        setMetadata((m) => ({ ...m, title: result.metadata.title }));
-      }
-      setSelectedDay('الكل');
-    } catch (err: any) {
-      setStatusToast({
-        kind: 'error',
-        text: err?.message || 'تعذّرت قراءة الصورة، حاول مرة ثانية.',
-      });
+      const result = await uploadAndExtractSchedule(files, floorRules, vision);
+      setScan((previous) => ({
+        files,
+        sessions: vision && !result.sessions.length ? previous?.sessions ?? [] : result.sessions,
+        notices: result.notices,
+      }));
+    } catch (err) {
+      const notice = err instanceof Error ? err.message : 'تعذّرت قراءة الصور. جرّب مرة أخرى.';
+      setScan((previous) => ({ files, sessions: previous?.sessions ?? [], notices: [notice] }));
     } finally {
       scanInProgress.current = false;
       setIsScanning(false);
     }
+  };
+
+  const importSelected = (selected: LectureSession[]) => {
+    const additions = selected.filter((incoming) => !sessions.some((saved) => isSameMeeting(saved, incoming)));
+    setSessions((previous) => [...previous, ...additions.filter((incoming) =>
+      !previous.some((saved) => isSameMeeting(saved, incoming)))]);
+    setScan(null);
+    setReadyPdf(null);
+    setSelectedDay('الكل');
+    setStatusToast({ kind: 'info', text: additions.length
+      ? `تمت إضافة ${additions.length} محاضرات للجدول.` : 'المحاضرات المحدّدة موجودة مسبقاً في الجدول.' });
   };
 
   const handleSaveSession = (updated: LectureSession) => {
@@ -806,6 +782,15 @@ export function App() {
       )}
 
       {/* Modals */}
+      {scan && <ImportReview
+        sessions={scan.sessions}
+        notices={scan.notices}
+        busy={isScanning}
+        onClose={() => setScan(null)}
+        onAddImages={(files) => handleScanFiles([...scan.files, ...files])}
+        onScanWithModel={(options) => handleScanFiles(scan.files, options)}
+        onImport={importSelected}
+      />}
       <SessionEditorModal
         isOpen={isEditorOpen}
         session={editingSession}

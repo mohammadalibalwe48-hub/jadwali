@@ -377,7 +377,7 @@ function normalizeRoomToken(
   };
 }
 
-function clusterWordsIntoRows(words: OcrWord[], rowTol: number): OcrWord[][] {
+export function clusterWordsIntoRows(words: OcrWord[], rowTol: number): OcrWord[][] {
   const sorted = [...words].sort((a, b) => a.y + a.h / 2 - (b.y + b.h / 2));
   const rows: Array<{ cy: number; items: OcrWord[] }> = [];
 

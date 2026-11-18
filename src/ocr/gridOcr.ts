@@ -209,8 +209,8 @@ export async function readScheduleGrids(
 ): Promise<ParsedRawSession[] | null> {
   const scan = document.createElement('canvas');
   const scale = Math.min(1, 1200 / Math.max(image.width, image.height));
-  scan.width = Math.round(image.width * scale);
-  scan.height = Math.round(image.height * scale);
+  scan.width = Math.max(1, Math.round(image.width * scale));
+  scan.height = Math.max(1, Math.round(image.height * scale));
   scan.getContext('2d')!.drawImage(image, 0, 0, scan.width, scan.height);
   const grids = findScheduleGrids(grayscale(scan), scan.width, scan.height);
   if (!grids.length) return null;
