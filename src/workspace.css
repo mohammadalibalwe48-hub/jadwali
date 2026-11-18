@@ -19,12 +19,20 @@
   z-index: -1;
   inset: 0;
   pointer-events: none;
+  overflow: hidden;
+}
+.workspace-backdrop::before, .workspace-backdrop::after {
+  position: absolute;
+  content: '';
+}
+.workspace-backdrop::before {
+  /* Extend the photo past the edges to keep blur coverage uniform. */
+  inset: -9px;
   background: url('./assets/campus-at-night.webp') 42% 42% / cover no-repeat;
+  filter: blur(3px);
 }
 .workspace-backdrop::after {
-  position: absolute;
   inset: 0;
-  content: '';
   background: #0d13243b;
 }
 .workspace-header { border-block-end: 1px solid #a2b7e12a; background: #0e1526a6; }
@@ -330,7 +338,7 @@
   .next-class-details { padding-inline: 13px; }
 }
 @media (max-width: 760px) {
-  .workspace-backdrop {
+  .workspace-backdrop::before {
     background-image: url('./assets/campus-at-night-small.webp');
     background-position: 28% center;
   }
