@@ -1,5 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  CalendarDays,
+  ClipboardCheck,
+  Cloud,
+  Image,
+  Smartphone,
   Plus,
   Camera,
   FileText,
@@ -24,6 +29,25 @@ import { ImportReview } from './components/ImportReview';
 import { SessionEditorModal } from './components/SessionEditorModal';
 import { FloorRulesModal } from './components/FloorRulesModal';
 import { SettingsModal } from './components/SettingsModal';
+
+import { NextClass } from './components/NextClass';
+import { AttendanceDialog } from './components/AttendanceDialog';
+import { CalendarDialog } from './components/CalendarDialog';
+import { ImageDialog } from './components/ImageDialog';
+import { InstallDialog, useInstall } from './components/InstallDialog';
+import { BackupDialog } from './components/BackupDialog';
+import { useBackupSync } from './services/useBackupSync';
+import type { ScheduleBackup } from './services/backup';
+import { EMPTY_ATTENDANCE, type Attendance } from './utils/attendance';
+
+const ATTENDANCE_KEY = 'jadwali_attendance_v1';
+const tools = [
+  { id: 'attendance', label: 'الحضور', Icon: ClipboardCheck, needsSchedule: false },
+  { id: 'calendar', label: 'التقويم', Icon: CalendarDays, needsSchedule: true },
+  { id: 'image', label: 'مشاركة صورة', Icon: Image, needsSchedule: true },
+  { id: 'install', label: 'تثبيت التطبيق', Icon: Smartphone, needsSchedule: false },
+  { id: 'backup', label: 'نسخ ومزامنة', Icon: Cloud, needsSchedule: false },
+] as const;
 
 const SESSIONS_KEY = 'jadwali_user_sessions_v2';
 const META_KEY = 'jadwali_user_meta_v2';
@@ -70,6 +94,28 @@ export function App() {
     }
   });
 
+  const [attendance, setAttendance] = useState<Attendance>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(ATTENDANCE_KEY) ?? 'null') ?? EMPTY_ATTENDANCE;
+    } catch {
+      return EMPTY_ATTENDANCE;
+    }
+  });
+  const [activeTool, setActiveTool] = useState<(typeof tools)[number]['id'] | null>(null);
+  const closeTool = () => setActiveTool(null);
+  const installation = useInstall();
+
+  const snapshot = useMemo<ScheduleBackup>(() => ({ version: 1, sessions, metadata, floorRules, attendance }),
+    [sessions, metadata, floorRules, attendance]);
+  const restore = useCallback((backup: ScheduleBackup) => {
+    setSessions(backup.sessions);
+    setMetadata(backup.metadata);
+    setFloorRules(backup.floorRules);
+    setAttendance(backup.attendance);
+    setSelectedDay('الكل');
+  }, []);
+  const sync = useBackupSync(snapshot, restore);
+
   const [selectedDay, setSelectedDay] = useState<DayOfWeek | 'الكل'>('الكل');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
 
@@ -103,6 +149,10 @@ export function App() {
   useEffect(() => {
     localStorage.setItem(RULES_KEY, JSON.stringify(floorRules));
   }, [floorRules]);
+
+  useEffect(() => {
+    localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(attendance));
+  }, [attendance]);
 
   // Support Ctrl+V paste of screenshots on desktop
   useEffect(() => {
@@ -272,6 +322,17 @@ export function App() {
             </button>
           </div>
         )}
+
+        {sessions.length > 0 && <NextClass sessions={sessions} />}
+        <div aria-label="أدوات الجدول" className="mb-5 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+          {tools.filter(({ id, needsSchedule }) => (!needsSchedule || sessions.length > 0) &&
+            (id !== 'attendance' || sessions.length > 0 || attendance.records.length > 0)).map(({ id, label, Icon }) => (
+            <button key={id} type="button" onClick={() => setActiveTool(id)}
+              className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-[#E2DFD7] bg-white px-1.5 py-2.5 text-[11px] font-bold hover:border-[#173832] sm:px-3 sm:text-xs">
+              <Icon size={15} aria-hidden="true" className="shrink-0 text-[#235047]" /> {label}
+            </button>
+          ))}
+        </div>
 
         {sortedSessions.length === 0 ? (
           /* CLEAN EMPTY STATE — ZERO DEMO DATA */
@@ -703,6 +764,14 @@ export function App() {
           </div>
         </div>
       )}
+
+      {activeTool === 'attendance' && <AttendanceDialog sessions={sessions} attendance={attendance} onChange={setAttendance} onClose={closeTool} />}
+      {activeTool === 'calendar' && <CalendarDialog sessions={sessions} onClose={closeTool} />}
+      {activeTool === 'image' && <ImageDialog sessions={sessions} metadata={metadata} onClose={closeTool} />}
+      {activeTool === 'install' && <InstallDialog installation={installation} onClose={closeTool} />}
+      {activeTool === 'backup' && <BackupDialog sync={sync} hasData={sessions.length > 0 || attendance.records.length > 0 ||
+        Object.keys(attendance.limits).length > 0 || JSON.stringify(floorRules) !== JSON.stringify(DEFAULT_FLOOR_RULES) ||
+        JSON.stringify(metadata) !== JSON.stringify(DEFAULT_META)} onClose={closeTool} />}
 
       {/* Modals */}
       {isPdfOpen && <PdfExportDialog metadata={metadata} sessions={sessions} floorRules={floorRules}
