@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { del, get, put, BlobPreconditionFailedError } from '@vercel/blob';
 import { envelopeSchema, MAX_BACKUP_BYTES } from '../src/services/backupProtocol.js';
 
-const etagPattern = /^"[A-Za-z0-9_:-]{1,128}"$/;
+const etagPattern = /^(?:W\/)?"[A-Za-z0-9_:-]{1,128}"$/;
 
 async function readEnvelope(req: IncomingMessage & { body?: unknown }) {
   if (Number(req.headers['content-length']) > MAX_BACKUP_BYTES) throw new RangeError();
@@ -41,15 +41,18 @@ export default async function handler(req: IncomingMessage & { body?: unknown },
   const token = req.headers.authorization?.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1];
   if (!token) return send(401);
   if (!process.env.BLOB_STORE_ID && !process.env.BLOB_READ_WRITE_TOKEN) return send(503);
-  const tag = req.method === 'GET' ? req.headers['if-none-match'] : req.headers['if-match'];
-  if (tag !== undefined && (typeof tag !== 'string' || !etagPattern.test(tag))) return send(400);
+  const revision = req.method === 'GET' ? req.headers['if-none-match'] : req.headers['if-match'];
+  if (revision !== undefined && (typeof revision !== 'string' || !etagPattern.test(revision))) return send(400);
+  // Vercel marks the response ETag weak after compression; Blob expects its original revision.
+  const tag = revision?.replace(/^W\//, '');
   const pathname = `backups/v1/${createHash('sha256').update(token).digest('hex')}.json`;
 
   try {
     if (req.method === 'GET') {
       const backup = await get(pathname, { access: 'private', useCache: false, ifNoneMatch: tag });
       if (!backup) return send(404);
-      res.setHeader('ETag', backup.blob.etag);
+      const etag = backup.blob.etag || tag;
+      if (etag) res.setHeader('ETag', etag);
       if (backup.statusCode === 304) return send(304);
       if (backup.blob.size > MAX_BACKUP_BYTES) return send(502);
       res.end(await new Response(backup.stream).text());
