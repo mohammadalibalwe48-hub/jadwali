@@ -72,7 +72,8 @@ try {
   assert.equal(gatewayCalls, 2);
   gatewayOutput = [{ sessions: [], portalTables, issues: [] }];
   assert.deepEqual(await post(multipleImages).then((response) => response.json()), expected);
-  gatewayOutput = [{ sessions: [], portalTables: [{ ...portalTables[0], catalog: [] }], issues: [] }];
+  const missingCatalog = { sessions: [], portalTables: [{ ...portalTables[0], catalog: [] }], issues: [] };
+  gatewayOutput = (schema) => schema.properties.catalogs ? { catalogs: [] } : missingCatalog;
   assert.deepEqual(await post(multipleImages).then((response) => response.json()), { sessions: [], issues: ['missing_catalog'] });
   gatewayOutput = [{ ...expected, portalTables: [], sessions: [{ ...expected.sessions[0], endTime: '07:00' }] }];
   assert.deepEqual(await post(input).then((response) => response.json()), { sessions: [], issues: ['unreadable'] });
@@ -83,12 +84,18 @@ try {
     issues: [],
   });
   gatewayOutput = (schema) => schema.properties.portalTables
-    ? [{ sessions: [{ ...meeting, courseName: null, courseCode: null }], portalTables: [{ ...portalTables[0], meetings: [] }], issues: [] }]
+    ? [{ sessions: [], portalTables: [{ ...portalTables[0], meetings: [] }], issues: [] }]
     : { meetings: [{ ...meeting, row: 3, day: 'الاثنين' }] };
   assert.deepEqual(await post(multipleImages).then((response) => response.json()), {
     sessions: [{ ...expected.sessions[0], day: 'الإثنين' }],
     issues: [],
   });
+  gatewayOutput = (schema) => {
+    if (schema.properties.catalogs) return { catalogs: [{ rowCount: 3, catalog: portalTables[0].catalog }] };
+    if (schema.properties.portalTables) return { sessions: [], portalTables: [], issues: ['missing_catalog'] };
+    return { meetings: [{ ...meeting, row: 3 }] };
+  };
+  assert.deepEqual(await post(multipleImages).then((response) => response.json()), expected);
   console.log('Vision API passed with server credentials, array-wrapped Qwen responses, and input validation.');
 } finally {
   globalThis.fetch = originalFetch;
