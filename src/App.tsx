@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Loader2, Plus, ScanLine, X } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Loader2, Plus, ScanLine, X } from 'lucide-react';
 import {
   DAYS_ORDER,
   isSameMeeting,
@@ -256,7 +256,7 @@ export function App() {
       <main id="workspace-content" className="workspace-content" tabIndex={-1}>
         <div className="workspace-masthead">
           <div className="workspace-title">
-            <time className="workspace-date" dateTime={localDate(now)}>{dateFormat.format(now)}</time>
+            <time className="workspace-date" dateTime={localDate(now)}><CalendarDays size={15} aria-hidden="true" />{dateFormat.format(now)}</time>
             <h1>{metadata.title.trim() && metadata.title !== DEFAULT_META.title ? metadata.title : 'جدول المحاضرات'}</h1>
             {metadata.subtitle.trim() && <p className="workspace-subtitle" dir="auto">{metadata.subtitle}</p>}
             {hasSchedule && metadata.semester.trim() && <p className="workspace-semester">
@@ -295,19 +295,27 @@ export function App() {
           <div className="empty-intro">
             <h2 id="empty-title">أضف جدول محاضراتك</h2>
             <p>اختر صورة أو لقطة شاشة للجدول، ثم راجع المحاضرات قبل حفظها.</p>
-          </div>
-          <button className="empty-upload" type="button" disabled={isScanning} onClick={onUpload}>
-            {isScanning ? <Loader2 size={23} className="animate-spin" aria-hidden="true" /> : <ScanLine size={23} aria-hidden="true" />}
-            <strong role={isScanning ? 'status' : undefined}>{isScanning ? 'جارٍ قراءة الجدول…' : 'استيراد صورة'}</strong>
-            {!isScanning && <small>أو اسحب الصورة إلى هنا</small>}
-          </button>
-          <div className="empty-actions">
-            <button className="button button-secondary" type="button" onClick={onNew}>
-              <Plus size={17} aria-hidden="true" /> إضافة محاضرة
-            </button>
+            <div className="empty-actions">
+              <button className="button empty-upload" type="button" disabled={isScanning} onClick={onUpload}>
+                {isScanning ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <ScanLine size={18} aria-hidden="true" />}
+                <span role={isScanning ? 'status' : undefined}>{isScanning ? 'جارٍ قراءة الجدول…' : 'استيراد صورة'}</span>
+              </button>
+              <button className="button empty-add" type="button" onClick={onNew}>
+                <Plus size={17} aria-hidden="true" /> إضافة محاضرة
+              </button>
+            </div>
             <button className="empty-restore" type="button" onClick={(event) => openTool('backup', event.currentTarget)}>
               استعادة جدول من جهاز آخر
             </button>
+          </div>
+          <div className="import-illustration" aria-hidden="true">
+            <div className="import-sheet">
+              <div className="import-sheet-heading"><i /><i /></div>
+              <div className="import-sheet-grid">
+                {Array.from({ length: 24 }, (_, index) => <i key={index} />)}
+              </div>
+            </div>
+            <div className="import-scan-frame"><i /><i /><i /><i /></div>
           </div>
         </section>}
       </main>
