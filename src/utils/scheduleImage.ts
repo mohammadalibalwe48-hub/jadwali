@@ -5,11 +5,11 @@ import { DAYS_ORDER, type LectureSession, type ScheduleMetadata } from '../types
 
 type Context = CanvasRenderingContext2D;
 const WIDTH = 1080;
-const INK = '#14254d';
-const BLUE = '#102d8b';
-const PALE = '#e1ebff';
-const PAPER = '#f3f6ff';
-const courseColors = ['#3967db', '#1a8296', '#bc456b', '#8b58c0', '#a66a1c'];
+const INK = '#32291f';
+const BLUE = '#71392e';
+const PALE = '#eadfd3';
+const PAPER = '#f5eee4';
+const courseColors = ['#9c5d46', '#627650', '#9a655e', '#816863', '#9a6c32'];
 const FAMILIES = '"Jadwali Image", Arial, sans-serif';
 const MARGIN = 64;
 const RIGHT = WIDTH - MARGIN;
@@ -129,19 +129,19 @@ export async function createTimetableImages(sessions: LectureSession[], meta: Sc
       for (const [line, name] of names.entries()) text(ctx, name, leading + inward * 34, y + 44 + line * 37, 37, { bold: true, max: 560, direction });
       const details = [displayType(session.type, locale), displayLocation(session.room, locale), session.floor && session.floor !== '—' ? (rtl ? 'طابق ' : 'Floor ') + displayLocation(session.floor, locale) : '']
         .filter((part) => part && part !== '—').map((part) => '\u2068' + part + '\u2069').join(' · ');
-      text(ctx, details, leading + inward * 34, y + height - 24, 25, { color: '#495c80', max: 560, direction });
+      text(ctx, details, leading + inward * 34, y + height - 24, 25, { color: '#695a4c', max: 560, direction });
       const time = '\u2066' + session.startTime + ' – ' + session.endTime + '\u2069';
       text(ctx, time, trailing - inward * 26, y + 54, 31, { direction: rtl ? 'ltr' : 'rtl', max: 288, bold: true });
       y += height;
     }
-    const foot = wallpaper ? PALE : '#495c80';
+    const foot = wallpaper ? PALE : '#695a4c';
     const footY = height - (wallpaper ? 125 : 60);
     const markX = rtl ? RIGHT - 30 : MARGIN;
-    rectangle(ctx, markX, footY - 25, 30, 30, 8, '#1046bf');
+    rectangle(ctx, markX, footY - 25, 30, 30, 8, '#795344');
     ctx.save();
     ctx.translate(markX, footY - 25);
     ctx.scale(30 / 48, 30 / 48);
-    for (const [key, color] of [['top', '#fff'], ['middle', '#97edfa'], ['bottom', '#fff'], ['tile', '#ff6380']] as const) {
+    for (const [key, color] of [['top', '#fff'], ['middle', '#e6bd8b'], ['bottom', '#fff'], ['tile', '#e3a192']] as const) {
       ctx.fillStyle = color;
       ctx.fill(new Path2D(brandPaths[key]));
     }

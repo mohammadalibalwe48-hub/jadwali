@@ -122,60 +122,60 @@ function buildScheduleHtml({ metadata, sessions, floorRules, locale }: PdfReques
     @page { size: A4 portrait; margin: 12mm 13mm; }
     * { box-sizing: border-box; }
     html { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-    body { margin: 0; color: #14254d; background: #fff; font-family: Schedule, sans-serif; font-size: 13px; line-height: 1.46; }
+    body { margin: 0; color: #32291f; background: #fff; font-family: Schedule, sans-serif; font-size: 13px; line-height: 1.46; }
     header {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 20px;
       align-items: center;
       padding: 17px 20px;
-      background: #edf3ff;
-      border-top: 4px solid #154cce;
+      background: #f2e7d8;
+      border-top: 4px solid #8b4c3b;
       border-radius: 0 0 10px 10px;
       break-inside: avoid;
       margin-bottom: 16px;
     }
     h1 { font-size: 30px; line-height: 1.3; margin: 2px 0; font-weight: 700; overflow-wrap: anywhere; }
-    .print-brand { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #173d92; }
-    .semester { font-size: 12px; font-weight: 700; color: #244ea3; overflow-wrap: anywhere; }
-    .subtitle { margin-top: 4px; color: #495c80; overflow-wrap: anywhere; }
+    .print-brand { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #754233; }
+    .semester { font-size: 12px; font-weight: 700; color: #86503a; overflow-wrap: anywhere; }
+    .subtitle { margin-top: 4px; color: #695a4c; overflow-wrap: anywhere; }
     dl { display: flex; gap: 14px; margin: 0; text-align: center; }
-    dl div { min-width: 61px; padding: 3px 8px; border-inline-start: 1px solid #c5d7f5; }
-    dt { font-size: 10px; color: #495c80; }
+    dl div { min-width: 61px; padding: 3px 8px; border-inline-start: 1px solid #e8d9ca; }
+    dt { font-size: 10px; color: #695a4c; }
     dd { margin: 0; font-size: 22px; line-height: 1.1; font-weight: 700; font-variant-numeric: tabular-nums; }
     table { width: 100%; table-layout: fixed; border-collapse: collapse; }
     col.time-column { width: 23%; } col.course-column { width: 56%; } col.location-column { width: 21%; }
     thead { display: table-header-group; }
-    thead th { background: #154cce; color: #fff; padding: 7px 12px; font-size: 11px; text-align: start; }
+    thead th { background: #8b4c3b; color: #fff; padding: 7px 12px; font-size: 11px; text-align: start; }
     tbody.keep-together, tr { break-inside: avoid; }
     .day { break-after: avoid; }
     .day th {
-      background: #f0f4ff;
+      background: #f5eee4;
       padding: 4px 12px;
       border-top: 2px solid #fff;
-      border-bottom: 1px solid #d6e1f6;
-      color: #173d92;
+      border-bottom: 1px solid #e4d5c5;
+      color: #754233;
       text-align: start;
       font-size: 13px;
       font-weight: 700;
     }
-    td { padding: 6px 12px; border-bottom: 1px solid #d6e1f6; vertical-align: middle; overflow-wrap: anywhere; }
-    .meeting:nth-child(odd) { background: #fafcff; }
+    td { padding: 6px 12px; border-bottom: 1px solid #e4d5c5; vertical-align: middle; overflow-wrap: anywhere; }
+    .meeting:nth-child(odd) { background: #fdf8f1; }
     .time { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 700; }
     .time bdi { white-space: nowrap; }
     .course { display: block; text-align: start; font-size: 15px; font-weight: 700; }
     .course-details { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
     .type { display: inline-block; padding: 0 7px; font-size: 10px; font-weight: 700; border-radius: 4px; }
-    .theory { background: #e4edf7; color: #244768; }
+    .theory { background: #e8ebdf; color: #4e5d40; }
     .practical { background: #fbebd8; color: #77451d; }
-    .code { font-size: 10px; font-weight: 700; color: #495c80; }
+    .code { font-size: 10px; font-weight: 700; color: #695a4c; }
     .room { display: block; text-align: start; font-size: 14px; font-weight: 700; }
-    .floor { display: block; text-align: start; font-size: 11px; color: #495c80; }
+    .floor { display: block; text-align: start; font-size: 11px; color: #695a4c; }
     .compact td { padding-top: 4px; padding-bottom: 4px; }
     .compact .day th { padding-top: 3px; padding-bottom: 3px; }
-    footer { margin-top: 13px; color: #495c80; font-size: 11px; break-inside: avoid; }
-    .off-days { padding: 6px 12px; background: #f0f4ff; border-inline-start: 3px solid #154cce; border-radius: 4px; }
-    .off-days strong { margin-inline-end: 8px; color: #173d92; }
+    footer { margin-top: 13px; color: #695a4c; font-size: 11px; break-inside: avoid; }
+    .off-days { padding: 6px 12px; background: #f5eee4; border-inline-start: 3px solid #8b4c3b; border-radius: 4px; }
+    .off-days strong { margin-inline-end: 8px; color: #754233; }
     .legend { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 12px; padding: 8px 0 0; }
     .legend span { max-width: 100%; overflow-wrap: anywhere; }
   </style>
@@ -185,9 +185,9 @@ function buildScheduleHtml({ metadata, sessions, floorRules, locale }: PdfReques
     <header>
       <div>
         <div class="print-brand"><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-          <rect width="48" height="48" rx="13" fill="#1046bf"/>
-          <path d="${brandPaths.top}" fill="#fff"/><path d="${brandPaths.middle}" fill="#97edfa"/>
-          <path d="${brandPaths.bottom}" fill="#fff"/><path d="${brandPaths.tile}" fill="#ff6380"/>
+          <rect width="48" height="48" rx="13" fill="#795344"/>
+          <path d="${brandPaths.top}" fill="#fff"/><path d="${brandPaths.middle}" fill="#e6bd8b"/>
+          <path d="${brandPaths.bottom}" fill="#fff"/><path d="${brandPaths.tile}" fill="#e3a192"/>
         </svg>${label('جدولي', 'Jadwali')}</div>
         ${semester ? `<div class="semester">${semester}</div>` : ''}
         <h1 dir="auto">${title}</h1>

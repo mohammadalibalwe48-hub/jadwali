@@ -54,7 +54,7 @@ function sendError(res: ServerResponse, status: number, message: string, forBrow
   res.end(`<!doctype html><html lang="${locale}" dir="${locale === 'en' ? 'ltr' : 'rtl'}"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>
-    <style>body{margin:10vh auto;padding:0 1.5rem;max-width:34rem;font:1.05rem system-ui,sans-serif;color:#14254d;background:#f3f6ff}a{color:#154cce}</style>
+    <style>body{margin:10vh auto;padding:0 1.5rem;max-width:34rem;font:1.05rem system-ui,sans-serif;color:#32291f;background:#f5eee4}a{color:#8b4c3b}</style>
     </head><body><h1>${title}</h1><p>${locale === 'en' ? 'Return to Jadwali and try exporting again.' : message}</p><p><a href="/">${locale === 'en' ? 'Back to Jadwali' : 'العودة إلى جدولي'}</a></p></body></html>`);
 }
 
