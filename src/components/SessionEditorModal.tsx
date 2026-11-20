@@ -1,5 +1,6 @@
+import { useLocale } from '../locale';
 import React, { useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { PencilLine, Trash2 } from 'lucide-react';
 import {
   DAYS_ORDER,
   type DayOfWeek,
@@ -45,6 +46,8 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
   onSave,
   onDelete,
 }) => {
+  const { t, typeName, dayName } = useLocale();
+  const [error, setError] = useState(false);
   const [day, setDay] = useState<DayOfWeek>(session?.day ?? defaultDay);
   const [startTime, setStartTime] = useState(session?.startTime ?? '10:00');
   const [endTime, setEndTime] = useState(session?.endTime ?? '11:30');
@@ -70,6 +73,7 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!courseName.trim()) return;
+    if (endTime <= startTime) { setError(true); return; }
     const { room: cleanedRoom } = cleanRoomCode(room);
     const finalRoom = cleanedRoom || room.trim() || '—';
     const finalFloor =
@@ -95,16 +99,15 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
   };
 
   return (
-    <ToolDialog title={session ? 'تعديل المحاضرة' : 'محاضرة جديدة'} onClose={onClose} size="wide" footer={
+    <ToolDialog title={session ? t("تعديل المحاضرة") : t("محاضرة جديدة")} onClose={onClose} size="wide" icon={PencilLine} footer={
       <>
         {session && onDelete ? (
           <button type="button" className="button button-danger" onClick={() => { onDelete(session.id); onClose(); }}>
-            <Trash2 size={16} aria-hidden="true" /> حذف
-          </button>
+            <Trash2 size={16} aria-hidden="true" />{' ' + t("حذف")}</button>
         ) : <span />}
         <div className="flex gap-2">
-          <button type="button" className={secondaryStyle} onClick={onClose}>إلغاء</button>
-          <button type="submit" form="session-editor-form" className={primaryStyle}>حفظ</button>
+          <button type="button" className={secondaryStyle} onClick={onClose}>{t("إلغاء")}</button>
+          <button type="submit" form="session-editor-form" className={primaryStyle}>{t("حفظ")}</button>
         </div>
       </>
     }>
@@ -112,10 +115,11 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
         {/* Course Name & Code */}
         <div className="grid grid-cols-3 gap-2.5">
           <div className="col-span-2">
-            <label htmlFor="editor-course" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">المادة</label>
+            <label htmlFor="editor-course" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">{t("المادة")}</label>
             <input id="editor-course"
               type="text"
-              placeholder="مثلاً: تحليل رياضي 1"
+              dir="auto"
+              placeholder={t("مثلاً: تحليل رياضي 1")}
               value={courseName}
               onChange={(e) => setCourseName(e.target.value)}
               className={fieldStyle + ' font-semibold'}
@@ -123,7 +127,7 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
             />
           </div>
           <div>
-            <label htmlFor="editor-code" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">الرمز</label>
+            <label htmlFor="editor-code" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">{t("الرمز")}</label>
             <input id="editor-code"
               type="text"
               dir="ltr"
@@ -137,7 +141,7 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
 
         {/* Day Pills */}
         <div>
-          <p id="editor-day" className="block text-xs font-semibold text-[var(--muted)] mb-2">اليوم</p>
+          <p id="editor-day" className="block text-xs font-semibold text-[var(--muted)] mb-2">{t("اليوم")}</p>
           <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5" role="group" aria-labelledby="editor-day">
             {DAYS_ORDER.map((d) => (
               <button
@@ -151,7 +155,7 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
                     : 'bg-[var(--soft)] text-[var(--muted)] hover:bg-[var(--hover)]'
                 }`}
               >
-                {d}
+                {dayName(d)}
               </button>
             ))}
           </div>
@@ -159,7 +163,7 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
 
         {/* Time Selection (Preset Pills + Clean 24h Selectors) */}
         <div>
-          <p className="block text-xs font-semibold text-[var(--muted)] mb-2">الوقت</p>
+          <p className="block text-xs font-semibold text-[var(--muted)] mb-2">{t("الوقت")}</p>
           <div className="flex flex-wrap gap-1.5 mb-3">
             {UNIVERSITY_SLOTS.map((slot) => {
               const isSelected = startTime === slot.start && endTime === slot.end;
@@ -185,14 +189,14 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
             })}
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5 editor-times">
             <div className="bg-[var(--soft)] border border-[var(--line)] rounded-md p-2.5">
-              <span className="block text-[11px] font-medium text-[var(--muted)] mb-1">البداية</span>
+              <span className="block text-[11px] font-medium text-[var(--muted)] mb-1">{t("البداية")}</span>
               <div className="flex items-center gap-1.5" dir="ltr">
                 <select
-                  value={startH} aria-label="ساعة البداية"
+                  value={startH} aria-label={t("ساعة البداية")}
                   onChange={(e) => setStartTime(`${e.target.value}:${startM}`)}
-                  className="flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                  className="min-w-0 flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
                 >
                   {HOURS.map((h) => (
                     <option key={h} value={h}>
@@ -202,9 +206,9 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
                 </select>
                 <span className="font-mono-num font-bold text-[var(--muted)]">:</span>
                 <select
-                  value={startM} aria-label="دقيقة البداية"
+                  value={startM} aria-label={t("دقيقة البداية")}
                   onChange={(e) => setStartTime(`${startH}:${e.target.value}`)}
-                  className="flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                  className="min-w-0 flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
                 >
                   {MINUTES.map((m) => (
                     <option key={m} value={m}>
@@ -216,12 +220,12 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
             </div>
 
             <div className="bg-[var(--soft)] border border-[var(--line)] rounded-md p-2.5">
-              <span className="block text-[11px] font-medium text-[var(--muted)] mb-1">النهاية</span>
+              <span className="block text-[11px] font-medium text-[var(--muted)] mb-1">{t("النهاية")}</span>
               <div className="flex items-center gap-1.5" dir="ltr">
                 <select
-                  value={endH} aria-label="ساعة النهاية"
+                  value={endH} aria-label={t("ساعة النهاية")}
                   onChange={(e) => setEndTime(`${e.target.value}:${endM}`)}
-                  className="flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                  className="min-w-0 flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
                 >
                   {HOURS.map((h) => (
                     <option key={h} value={h}>
@@ -231,9 +235,9 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
                 </select>
                 <span className="font-mono-num font-bold text-[var(--muted)]">:</span>
                 <select
-                  value={endM} aria-label="دقيقة النهاية"
+                  value={endM} aria-label={t("دقيقة النهاية")}
                   onChange={(e) => setEndTime(`${endH}:${e.target.value}`)}
-                  className="flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
+                  className="min-w-0 flex-1 bg-white border border-[var(--line)] rounded-md py-1.5 px-2 text-sm font-mono-num font-semibold focus:outline-none focus:border-[var(--ink)]"
                 >
                   {MINUTES.map((m) => (
                     <option key={m} value={m}>
@@ -246,35 +250,38 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
           </div>
         </div>
 
+        {error && endTime <= startTime && <p className="notice notice-error" role="alert">
+          {t('يجب أن يكون وقت النهاية بعد البداية.', 'End time must be after start time.')}
+        </p>}
         {/* Type + Room + Floor */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <div>
-            <p id="editor-type" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">النوع</p>
+            <p id="editor-type" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">{t("النوع")}</p>
             <div className="grid grid-cols-2 gap-1.5 bg-[var(--soft)] p-1 rounded-md" role="group" aria-labelledby="editor-type">
-              {(['نظري', 'عملي'] as SessionType[]).map((t) => (
+              {(['نظري', 'عملي'] as SessionType[]).map((kind) => (
                 <button
-                  key={t}
+                  key={kind}
                   type="button"
-                  onClick={() => setType(t)}
-                  aria-pressed={type === t}
+                  onClick={() => setType(kind)}
+                  aria-pressed={type === kind}
                   className={`py-2 rounded-md text-xs font-bold transition cursor-pointer ${
-                    type === t
+                    type === kind
                       ? 'bg-white text-[var(--ink)]'
                       : 'text-[var(--muted)] hover:text-[var(--ink)]'
                   }`}
                 >
-                  {t}
+                  {typeName(kind)}
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <label htmlFor="editor-room" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">القاعة</label>
+            <label htmlFor="editor-room" className="block text-xs font-semibold text-[var(--muted)] mb-1.5">{t("القاعة")}</label>
             <input id="editor-room"
               type="text"
               dir="auto"
-              placeholder="B-06 أو المدرّج"
+              placeholder={t("B-06 أو المدرّج")}
               value={room}
               onChange={(e) => handleRoomChange(e.target.value)}
               className={fieldStyle + ' font-semibold font-mono-num'}
@@ -283,7 +290,7 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label htmlFor="editor-floor" className="text-xs font-semibold text-[var(--muted)]">الطابق</label>
+              <label htmlFor="editor-floor" className="text-xs font-semibold text-[var(--muted)]">{t("الطابق")}</label>
               <button
                 type="button"
                 onClick={() => {
@@ -295,12 +302,12 @@ export const SessionEditorModal: React.FC<SessionEditorModalProps> = ({
                 }}
                 className="text-[11px] font-medium text-[var(--muted)] underline cursor-pointer"
               >
-                {floorAuto ? 'تلقائي' : 'تعديل يدوي'}
+                {floorAuto ? t("تلقائي") : t("تعديل يدوي")}
               </button>
             </div>
             <input id="editor-floor"
               type="text"
-              placeholder="يُحدّد من القاعة"
+              placeholder={t("يُحدّد من القاعة")}
               value={floor}
               onChange={(e) => {
                 setFloorAuto(false);

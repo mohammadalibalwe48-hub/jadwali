@@ -8,10 +8,10 @@ export function offlinePlugin(): Plugin {
     apply: 'build',
     enforce: 'post',
     generateBundle(_options, bundle) {
-      const files = ['/', '/manifest.webmanifest', '/icons/192.png', '/icons/512.png', '/icons/apple-touch.png',
+      const files = ['/', '/brand/mark.svg', '/manifest.webmanifest', '/icons/192.png', '/icons/512.png', '/icons/apple-touch.png',
         ...Object.keys(bundle).filter((name) => name.startsWith('assets/')).sort().map((name) => '/' + name)];
       const hash = createHash('sha256').update(JSON.stringify(files)).update(readFileSync('index.html'));
-      for (const file of files.filter((name) => name.startsWith('/icons/') || name.endsWith('.webmanifest'))) {
+      for (const file of files.filter((name) => name.startsWith('/icons/') || name.startsWith('/brand/') || name.endsWith('.webmanifest'))) {
         hash.update(readFileSync('public' + file));
       }
       const version = hash.digest('hex').slice(0, 16);

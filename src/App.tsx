@@ -1,5 +1,9 @@
+import { useLocale } from './locale';
+import { MAX_VISION_SCREENS } from './services/visionSettings';
+import { UploadDialog } from './components/UploadDialog';
+import { Welcome } from './components/Welcome';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, CheckCircle2, Loader2, Plus, ScanLine, X } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Plus, ScanLine, X } from 'lucide-react';
 import {
   DAYS_ORDER,
   isSameMeeting,
@@ -15,7 +19,7 @@ import { SessionEditorModal } from './components/SessionEditorModal';
 import { FloorRulesModal } from './components/FloorRulesModal';
 import { SettingsModal } from './components/SettingsModal';
 
-import { NextClass } from './components/NextClass';
+import { TodayView } from './components/TodayView';
 import { AttendanceDialog } from './components/AttendanceDialog';
 import { CalendarDialog } from './components/CalendarDialog';
 import { ImageDialog } from './components/ImageDialog';
@@ -30,7 +34,11 @@ import { ScheduleBoard, weekGroups, type DayFilter } from './components/Schedule
 import { localDate, scheduleDay } from './utils/semester';
 
 const ATTENDANCE_KEY = 'jadwali_attendance_v1';
-const dateFormat = new Intl.DateTimeFormat('ar-SY', { weekday: 'long', day: 'numeric', month: 'long', numberingSystem: 'latn' });
+const dates = Object.fromEntries(['ar', 'en'].map((locale) => [
+  locale, new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SY' : 'en', {
+    weekday: 'long', day: 'numeric', month: 'long', numberingSystem: 'latn',
+  }),
+]));
 
 const SESSIONS_KEY = 'jadwali_user_sessions_v2';
 const META_KEY = 'jadwali_user_meta_v2';
@@ -43,6 +51,7 @@ const DEFAULT_META: ScheduleMetadata = {
 };
 
 export function App() {
+  const { t, locale } = useLocale();
   // Wipe legacy v1 demo keys immediately so old demo schedules never reappear
   useEffect(() => {
     localStorage.removeItem('dawamna_saved_sessions_v1');
@@ -114,16 +123,15 @@ export function App() {
 
   // Extraction & Export states
   const [isScanning, setIsScanning] = useState(false);
+  const [pending, setPending] = useState<File[] | null>(null);
+  const [uploadError, setUploadError] = useState('');
   const [scan, setScan] = useState<{ files: File[]; sessions: LectureSession[]; notices: string[]; failed: boolean } | null>(null);
   const [statusToast, setStatusToast] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
-    const refresh = () => setNow((previous) => {
-      const current = new Date();
-      return previous.toDateString() === current.toDateString() ? previous : current;
-    });
-    const timer = window.setInterval(refresh, 60_000);
+    const refresh = () => setNow(new Date());
+    const timer = window.setInterval(refresh, 10_000);
     document.addEventListener('visibilitychange', refresh);
     return () => {
       window.clearInterval(timer);
@@ -136,7 +144,6 @@ export function App() {
   const [editingSession, setEditingSession] = useState<LectureSession | null>(null);
 
   const scanInProgress = useRef(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
@@ -154,38 +161,63 @@ export function App() {
     localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(attendance));
   }, [attendance]);
 
-  // Support Ctrl+V paste of screenshots on desktop
-  useEffect(() => {
-    const onPaste = (e: ClipboardEvent) => {
-      if (!e.clipboardData?.files?.length) return;
-      const imgs = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'));
-      if (imgs.length > 0) handleScanFiles(scan ? [...scan.files, ...imgs] : imgs);
-    };
-    window.addEventListener('paste', onPaste);
-    return () => window.removeEventListener('paste', onPaste);
-  });
+  function stageImages(files: File[], replacing = false) {
+    if (scanInProgress.current) return;
+    const images = files.filter((file) => file.type.startsWith('image/') ||
+      (!file.type && /\.(jpe?g|png|webp|gif|heic|heif|avif|bmp)$/i.test(file.name)));
+    const prior = replacing ? [] : pending ?? [];
+    if (!images.length || prior.length + images.length > MAX_VISION_SCREENS) {
+      setPending(pending ?? []);
+      setUploadError(!images.length ? t('اختر صورة جدول صالحة.', 'Choose a valid timetable image.') :
+        t(`يمكنك اختيار ${MAX_VISION_SCREENS} صور كحد أقصى.`, `You can choose up to ${MAX_VISION_SCREENS} images.`));
+      return;
+    }
+    setPending([...prior, ...images]);
+    setUploadError(images.length === files.length ? '' : t('تم تجاهل الملفات غير المدعومة.', 'Non-image files were skipped.'));
+  }
 
-  const handleScanFiles = async (files: File[]) => {
+  const handleScanFiles = async (files: File[], continuation = false) => {
     if (!files.length || scanInProgress.current) return;
     scanInProgress.current = true;
     setIsScanning(true);
     setStatusToast(null);
+    if (!continuation) setScan(null);
     try {
       const result = await uploadAndExtractSchedule(files, floorRules);
       setScan((previous) => ({
         files,
-        sessions: result.sessions.length ? result.sessions : previous?.sessions ?? [],
+        sessions: result.sessions.length || !continuation ? result.sessions : previous?.sessions ?? [],
         notices: result.notices,
         failed: false,
       }));
     } catch (err) {
-      const notice = err instanceof Error ? err.message : 'تعذّرت قراءة الصور. جرّب مرة أخرى.';
-      setScan((previous) => ({ files, sessions: previous?.sessions ?? [], notices: [notice], failed: true }));
+      const fallback = 'تعذّرت قراءة الصور. جرّب مرة أخرى.';
+      const notice = err instanceof Error ? err.message : fallback;
+      const translated = t(notice);
+      setScan((previous) => ({
+        files,
+        sessions: continuation ? previous?.sessions ?? [] : [],
+        notices: [locale === 'en' && translated === notice ? t(fallback) : translated],
+        failed: true,
+      }));
     } finally {
       scanInProgress.current = false;
+      setPending(null);
       setIsScanning(false);
     }
   };
+
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      if (activeTool || isEditorOpen || scanInProgress.current) return;
+      const images = Array.from(event.clipboardData?.files ?? []).filter((file) => file.type.startsWith('image/'));
+      if (!images.length) return;
+      if (scan) void handleScanFiles([...scan.files, ...images], true);
+      else stageImages(images);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  });
 
   const importSelected = (selected: LectureSession[]) => {
     const additions = selected.filter((incoming) => !sessions.some((saved) => isSameMeeting(saved, incoming)));
@@ -194,7 +226,8 @@ export function App() {
     setScan(null);
     setSelectedDay('الكل');
     setStatusToast(additions.length
-      ? `تمت إضافة ${additions.length} محاضرات للجدول.` : 'المحاضرات المحدّدة موجودة مسبقاً في الجدول.');
+      ? t(`تمت إضافة ${additions.length} محاضرات للجدول.`, `Added ${additions.length} ${additions.length === 1 ? 'class' : 'classes'} to your timetable.`)
+      : t('المحاضرات المحدّدة موجودة مسبقاً في الجدول.'));
   };
 
   const handleSaveSession = (updated: LectureSession) => {
@@ -234,7 +267,7 @@ export function App() {
   const groups = useMemo(() => weekGroups(sessions), [sessions]);
   const today = scheduleDay(now);
   const hasSchedule = sessions.length > 0;
-  const onUpload = () => fileInputRef.current?.click();
+  const onUpload = () => { setUploadError(''); setPending([]); };
   const onNew = () => {
     setEditingSession(null);
     setIsEditorOpen(true);
@@ -246,70 +279,41 @@ export function App() {
   };
 
   return (
-    <div className="jadwali-workspace">
-      <a className="skip-link" href="#workspace-content">تجاوز إلى الجدول</a>
-      <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => {
-        if (event.target.files?.length) void handleScanFiles(Array.from(event.target.files));
-        event.target.value = '';
-      }} />
-      <div className="workspace-backdrop" aria-hidden="true" />
+    <div className="jadwali-workspace" data-state={hasSchedule ? 'ready' : 'welcome'}>
+      <a className="skip-link" href="#workspace-content">{t('تجاوز إلى الجدول')}</a>
       <WorkspaceNavigation onTool={openTool} onSchedule={onSchedule} />
       <main id="workspace-content" className="workspace-content" tabIndex={-1}>
-        <div className="workspace-masthead">
+        {hasSchedule && <div className="workspace-masthead">
           <div className="workspace-title">
-            <time className="workspace-date" dateTime={localDate(now)}><CalendarDays size={15} aria-hidden="true" />{dateFormat.format(now)}</time>
-            <h1>{metadata.title.trim() && metadata.title !== DEFAULT_META.title ? metadata.title : 'جدول المحاضرات'}</h1>
+            <time className="workspace-date" dateTime={localDate(now)}><CalendarDays size={15} aria-hidden="true" />{dates[locale].format(now)}</time>
+            <h1>{metadata.title.trim() && metadata.title !== DEFAULT_META.title ? metadata.title : t('جدول المحاضرات')}</h1>
             {metadata.subtitle.trim() && <p className="workspace-subtitle" dir="auto">{metadata.subtitle}</p>}
-            {hasSchedule && metadata.semester.trim() && <p className="workspace-semester">
-              {metadata.semester.split(/(\d{4}\s*\/\s*\d{4})/).map((part, index) => index % 2 ? <bdi key={index} dir="ltr">{part}</bdi> : part)}
+            {metadata.semester.trim() && <p className="workspace-semester">
+              {(metadata.semester === DEFAULT_META.semester
+                  ? t(DEFAULT_META.semester, 'First term 2026 / 2027') : metadata.semester).split(/(\d{4}\s*\/\s*\d{4})/).map((part, index) => index % 2 ? <bdi key={index} dir="ltr">{part}</bdi> : part)}
             </p>}
           </div>
-          {hasSchedule && <div className="schedule-actions">
+          <div className="schedule-actions">
             <button className="button button-secondary" type="button" onClick={onNew}>
-              <Plus size={17} aria-hidden="true" />إضافة محاضرة
+              <Plus size={17} aria-hidden="true" />{t('إضافة محاضرة')}
             </button>
             <button className="button button-primary" type="button" disabled={isScanning} onClick={onUpload}>
-              {isScanning ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <ScanLine size={17} aria-hidden="true" />}
-              {isScanning ? 'جارٍ الاستيراد…' : 'استيراد صورة'}
+              <ScanLine size={17} aria-hidden="true" />{t('استيراد صورة')}
             </button>
-          </div>}
-        </div>
+          </div>
+        </div>}
 
         {statusToast && <div role="status" className="workspace-status">
           <CheckCircle2 size={19} aria-hidden="true" /><span>{statusToast}</span>
-          <button className="icon-button" type="button" aria-label="إغلاق التنبيه" onClick={() => setStatusToast(null)}><X size={17} /></button>
+          <button className="icon-button" type="button" aria-label={t('إغلاق التنبيه')} onClick={() => setStatusToast(null)}><X size={17} /></button>
         </div>}
-        {isScanning && hasSchedule && !scan && <div role="status" className="workspace-status">
-          <Loader2 size={19} className="animate-spin" aria-hidden="true" /><span>جارٍ قراءة الجدول. ستظهر المحاضرات للمراجعة.</span>
-        </div>}
-
         {hasSchedule ? <div className="workspace-grid">
-          <NextClass sessions={sessions} />
+          <TodayView sessions={sessions} now={now} attendance={attendance} onAttendance={setAttendance} />
           <ScheduleBoard groups={groups} today={today} selectedDay={selectedDay} onDay={setSelectedDay}
             view={viewMode} onView={setViewMode} onNew={onNew}
             onEdit={(session) => { setEditingSession(session); setIsEditorOpen(true); }} />
-        </div> : <section className="workspace-empty" aria-labelledby="empty-title" onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => {
-              event.preventDefault();
-              void handleScanFiles(Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')));
-            }}>
-          <div className="empty-intro">
-            <h2 id="empty-title">أضف جدول محاضراتك</h2>
-            <p>اختر صورة أو لقطة شاشة للجدول، ثم راجع المحاضرات قبل حفظها.</p>
-            <div className="empty-actions">
-              <button className="button empty-upload" type="button" disabled={isScanning} onClick={onUpload}>
-                {isScanning ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <ScanLine size={18} aria-hidden="true" />}
-                <span role={isScanning ? 'status' : undefined}>{isScanning ? 'جارٍ قراءة الجدول…' : 'استيراد صورة'}</span>
-              </button>
-              <button className="button empty-add" type="button" onClick={onNew}>
-                <Plus size={17} aria-hidden="true" /> إضافة محاضرة
-              </button>
-            </div>
-            <button className="empty-restore" type="button" onClick={(event) => openTool('backup', event.currentTarget)}>
-              استعادة جدول من جهاز آخر
-            </button>
-          </div>
-        </section>}
+        </div> : <Welcome onUpload={onUpload} onNew={onNew} onRestore={(launcher) => openTool('backup', launcher)}
+          onDrop={stageImages} />}
       </main>
 
       {(activeTool === 'export' || activeTool === 'more') && <WorkspaceMenu type={activeTool} hasSchedule={hasSchedule}
@@ -324,13 +328,19 @@ export function App() {
       {activeTool === 'pdf' && <PdfExportDialog metadata={metadata} sessions={sessions} floorRules={floorRules} onClose={closeTool} />}
       {activeTool === 'floor' && <FloorRulesModal rules={floorRules} onClose={closeTool} onSaveRules={handleUpdateFloorRules} />}
       {activeTool === 'settings' && <SettingsModal hasSessions={hasSchedule} onClose={closeTool} onClearAll={handleClearAll} />}
-      {scan && <ImportReview
+      {pending && <UploadDialog files={pending} busy={isScanning} error={uploadError}
+        onAdd={stageImages} onReplace={(files) => stageImages(files, true)}
+        onRemove={(index) => { setPending((files) => files?.filter((_, i) => i !== index) ?? []); setUploadError(''); }}
+        onScan={() => void handleScanFiles(pending)}
+        onClose={() => setPending(null)} />}
+      {scan && !pending && <ImportReview
+        files={scan.files}
         sessions={scan.sessions}
         notices={scan.notices}
         busy={isScanning}
         onClose={() => setScan(null)}
-        onAddImages={(files) => handleScanFiles([...scan.files, ...files])}
-        onRetry={scan.failed ? () => handleScanFiles(scan.files) : undefined}
+        onAddImages={(files) => handleScanFiles([...scan.files, ...files], true)}
+        onRetry={scan.failed ? () => handleScanFiles(scan.files, true) : undefined}
         onImport={importSelected}
       />}
       {isEditorOpen && <SessionEditorModal

@@ -1,5 +1,6 @@
+import { useLocale } from '../locale';
 import React, { useState } from 'react';
-import { Plus, Trash2, RotateCcw } from 'lucide-react';
+import { Layers3, Plus, Trash2, RotateCcw } from 'lucide-react';
 import { ToolDialog } from './ToolDialog';
 import type { FloorRule } from '../types';
 import { DEFAULT_FLOOR_RULES } from '../utils/floorMapper';
@@ -15,6 +16,7 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
   onClose,
   onSaveRules,
 }) => {
+  const { t, locationName } = useLocale();
   const [draftRules, setDraftRules] = useState<FloorRule[]>(rules);
   const [newPrefix, setNewPrefix] = useState('');
   const [newFloor, setNewFloor] = useState('');
@@ -38,8 +40,8 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
   };
 
   return (
-    <ToolDialog title="دليل رموز الطوابق" onClose={onClose}>
-      <p className="dialog-note">يُستخدم الرمز الأول للقاعة لتحديد طابقها تلقائياً.</p>
+    <ToolDialog title={t("دليل رموز الطوابق")} icon={Layers3} onClose={onClose}>
+      <p className="dialog-note">{t("يُستخدم الرمز الأول للقاعة لتحديد طابقها تلقائياً.")}</p>
       <div className="divide-y divide-[var(--line)] border border-[var(--line)] rounded-md bg-[var(--soft)]">
         {draftRules.map((rule) => (
           <div
@@ -51,19 +53,19 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
                 dir="ltr"
                 className="inline-flex items-center justify-center min-w-11 px-2.5 py-1 rounded-md bg-white border border-[var(--line)] text-[var(--ink)] font-mono-num font-bold text-xs"
               >
-                {rule.prefix}
+                {locationName(rule.prefix)}
               </span>
               <div>
-                <div className="text-sm font-bold text-[var(--ink)]">الطابق {rule.floor}</div>
+                <div className="text-sm font-bold text-[var(--ink)]">{t("الطابق") + ' '}{locationName(rule.floor)}</div>
                 <div className="text-[11px] font-mono-num text-[var(--muted)]" dir="ltr">
                   {rule.example}
                 </div>
               </div>
             </div>
             <button
-              type="button" aria-label={`حذف قاعدة ${rule.prefix}`}
+              type="button" aria-label={t(`حذف قاعدة ${locationName(rule.prefix)}`, `Delete rule ${locationName(rule.prefix)}`)}
               onClick={() => setDraftRules((prev) => prev.filter((r) => r.id !== rule.id))}
-              className="p-1.5 text-[var(--muted)] hover:text-[#B42318] rounded-md transition cursor-pointer"
+              className="p-1.5 text-[var(--muted)] hover:text-[var(--error)] rounded-md transition cursor-pointer"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -73,7 +75,7 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
 
       <form onSubmit={handleAdd} className="flex items-end gap-2">
         <div className="w-24">
-          <label htmlFor="floor-prefix" className="block text-[11px] font-semibold text-[var(--muted)] mb-1">الرمز</label>
+          <label htmlFor="floor-prefix" className="block text-[11px] font-semibold text-[var(--muted)] mb-1">{t("الرمز")}</label>
           <input id="floor-prefix"
             type="text"
             dir="auto"
@@ -84,17 +86,17 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
           />
         </div>
         <div className="flex-1">
-          <label htmlFor="floor-name" className="block text-[11px] font-semibold text-[var(--muted)] mb-1">الطابق</label>
+          <label htmlFor="floor-name" className="block text-[11px] font-semibold text-[var(--muted)] mb-1">{t("الطابق")}</label>
           <input id="floor-name"
             type="text"
-            placeholder="الثالث"
+            placeholder={t("الثالث")}
             value={newFloor}
             onChange={(e) => setNewFloor(e.target.value)}
             className="w-full rounded-md bg-[var(--soft)] border border-[var(--line)] px-3 py-2 text-sm font-semibold focus:bg-white focus:border-[var(--ink)] focus:outline-none"
           />
         </div>
         <button
-          type="submit" aria-label="إضافة قاعدة"
+          type="submit" aria-label={t("إضافة قاعدة")}
           className="p-2.5 rounded-md bg-[var(--soft)] border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--hover)] transition cursor-pointer"
         >
           <Plus className="w-4 h-4" />
@@ -107,9 +109,7 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
           onClick={() => setDraftRules(DEFAULT_FLOOR_RULES)}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--muted)] hover:text-[var(--ink)] cursor-pointer"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
-          الافتراضي
-        </button>
+          <RotateCcw className="w-3.5 h-3.5" />{t("الافتراضي")}</button>
         <button
           type="button"
           onClick={() => {
@@ -117,9 +117,7 @@ export const FloorRulesModal: React.FC<FloorRulesModalProps> = ({
             onClose();
           }}
           className="px-5 py-2.5 rounded-md text-xs font-bold bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)] transition cursor-pointer"
-        >
-          تطبيق
-        </button>
+        >{t("تطبيق")}</button>
       </div>
     </ToolDialog>
   );

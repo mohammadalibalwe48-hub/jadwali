@@ -1,5 +1,6 @@
+import { useLocale } from '../locale';
 import { useEffect, useState } from 'react';
-import { Download, Share } from 'lucide-react';
+import { Smartphone, Download, Share } from 'lucide-react';
 import { primaryStyle, ToolDialog } from './ToolDialog';
 
 interface BrowserInstallEvent extends Event {
@@ -46,18 +47,19 @@ export function useInstall() {
 }
 
 export function InstallDialog({ installation, onClose }: { installation: ReturnType<typeof useInstall>; onClose: () => void }) {
+  const { t } = useLocale();
   return (
-    <ToolDialog title="تثبيت جدولي" onClose={onClose}>
-      {installation.installed ? <p className="text-sm font-bold">جدولي مثبت على هذا الجهاز.</p> : <>
-        {installation.canPrompt && <button type="button" className={primaryStyle} onClick={() => void installation.install()}><Download size={16} /> تثبيت التطبيق</button>}
+    <ToolDialog title={t("تثبيت جدولي")} icon={Smartphone} onClose={onClose}>
+      {installation.installed ? <p className="text-sm font-bold">{t("جدولي مثبت على هذا الجهاز.")}</p> : <>
+        {installation.canPrompt && <button type="button" className={primaryStyle} onClick={() => void installation.install()}><Download size={16} />{' ' + t("تثبيت التطبيق")}</button>}
         <div className="space-y-3 rounded-xl bg-white p-3 text-sm leading-relaxed">
-          <p><strong>Safari على iPhone</strong><br />اضغط مشاركة <Share size={14} className="inline" aria-hidden="true" /> ثم اختر «إضافة إلى الشاشة الرئيسية».</p>
-          <p><strong>Chrome</strong><br />افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».</p>
+          <p><strong>{t("Safari على iPhone")}</strong><br />{t("اضغط مشاركة") + ' '}<Share size={14} className="inline" aria-hidden="true" />{' ' + t("ثم اختر «إضافة إلى الشاشة الرئيسية».")}</p>
+          <p><strong>Chrome</strong><br />{t("افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».")}</p>
         </div>
       </>}
       <p className="text-xs leading-relaxed text-[var(--muted)]">{installation.offlineReady
-        ? 'جدولك المحفوظ متاح دون إنترنت في هذا المتصفح. افتح النسخة المثبّتة مرة وأنت متصل لتجهيزها.'
-        : 'افتح جدولي مرة وأنت متصل حتى يصبح جدولك جاهزاً للعمل دون إنترنت.'}</p>
+        ? t("جدولك المحفوظ متاح دون إنترنت في هذا المتصفح. افتح النسخة المثبّتة مرة وأنت متصل لتجهيزها.")
+        : t("افتح جدولي مرة وأنت متصل حتى يصبح جدولك جاهزاً للعمل دون إنترنت.")}</p>
     </ToolDialog>
   );
 }

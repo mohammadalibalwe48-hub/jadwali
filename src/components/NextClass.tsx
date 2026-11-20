@@ -1,46 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useLocale } from '../locale';
 import type { LectureSession } from '../types';
 import { nextMeeting } from '../utils/semester';
 
-const units = (['day', 'hour', 'minute'] as const).map((unit) =>
-  new Intl.NumberFormat('ar', { style: 'unit', unit, unitDisplay: 'long', numberingSystem: 'latn' }));
-
-export function NextClass({ sessions }: { sessions: LectureSession[] }) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const update = () => setNow(new Date());
-    const timer = window.setInterval(update, 10_000);
-    document.addEventListener('visibilitychange', update);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', update);
-    };
-  }, []);
-
+const units = ['day', 'hour', 'minute'] as const;
+export function NextClass({ sessions, now }: { sessions: LectureSession[]; now: Date }) {
+  const { t, locationName, locale, dayName } = useLocale();
   const next = nextMeeting(sessions, now);
   if (!next) return null;
   const { session, starts, offset } = next;
   const minutes = Math.ceil((+starts - +now) / 60_000);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  const date = offset === 0 ? 'اليوم' : offset === 1 ? 'غداً' : session.day;
+  const date = offset === 0 ? t("اليوم") : offset === 1 ? t("غداً") : dayName(session.day);
   const countdown = [days, hours % 24, minutes % 60]
-    .flatMap((value, index) => value ? [units[index].format(value)] : []).join(' و');
-  const knownFloor = session.floor && session.floor !== '—' && session.floor !== 'غير محدّد';
+    .flatMap((value, index) => value ? [new Intl.NumberFormat(locale, {
+      style: 'unit', unit: units[index], unitDisplay: 'long', numberingSystem: 'latn',
+    }).format(value)] : []).join(t(' و', ' and '));
 
   return (
     <section className="next-class" aria-labelledby="next-class-title">
       <div className="next-class-main">
         <div className="next-class-heading">
-          <h2 id="next-class-title">المحاضرة القادمة</h2>
-          <p className="next-class-countdown">{minutes > 0 ? `بعد ${countdown}` : 'تبدأ الآن'}</p>
+          <h3 id="next-class-title">{t("المحاضرة القادمة")}</h3>
+          <p className="next-class-countdown">{minutes > 0 ? t(`بعد ${countdown}`, `In ${countdown}`) : t("تبدأ الآن")}</p>
         </div>
         <p className="next-class-subject" dir="auto">{session.courseName}</p>
       </div>
       <dl className="next-class-details">
-        <div><dt>{date}</dt><dd className="next-time"><bdi>{session.startTime}–{session.endTime}</bdi></dd></div>
-        <div><dt>القاعة</dt><dd><bdi>{session.room || '—'}</bdi></dd></div>
-        <div><dt>الطابق</dt><dd>{knownFloor ? session.floor : '—'}</dd></div>
+        <div><dt>{date}</dt><dd className="next-time"><bdi dir="ltr">{session.startTime}–{session.endTime}</bdi></dd></div>
+        <div><dt>{t("القاعة")}</dt><dd><bdi>{locationName(session.room || '—')}</bdi></dd></div>
+        <div><dt>{t("الطابق")}</dt><dd>{session.floor === 'غير محدّد' ? '—'  : locationName(session.floor || '—')}</dd></div>
       </dl>
     </section>
   );

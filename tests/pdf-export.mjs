@@ -29,6 +29,7 @@ try {
   const cases = [
     { name: 'download', body: new URLSearchParams({ payload: JSON.stringify(short), disposition: 'attachment' }), disposition: 'attachment', sessions: short.sessions, onePage: true },
     { name: 'preview', body: new URLSearchParams({ payload: JSON.stringify(schedule), disposition: 'inline' }), disposition: 'inline', sessions: schedule.sessions, onePage: false },
+    { name: 'english', body: JSON.stringify({ ...short, locale: 'en' }), disposition: 'attachment', sessions: short.sessions, onePage: true },
     { name: 'json', body: JSON.stringify(short), disposition: 'attachment', sessions: short.sessions, onePage: true },
   ];
 
@@ -52,6 +53,10 @@ try {
     else assert.ok(pages > 1, 'the long schedule should paginate');
     const contents = execFileSync('pdftotext', [path, '-'], { encoding: 'utf8' });
     for (const { courseCode } of test.sessions) assert.ok(contents.includes(courseCode), `Missing ${courseCode}`);
+    if (test.name === 'english') {
+      assert.match(contents, /Weekly timetable/);
+      assert.match(contents, /Room and floor/);
+    }
     const fonts = execFileSync('pdffonts', [path], { encoding: 'utf8' });
     assert.match(fonts, /NotoSansArabic.*yes\s+yes\s+yes/);
     console.log(`${test.name} PDF passed (${test.sessions.length} meetings, ${pages} page(s))`);

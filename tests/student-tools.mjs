@@ -5,6 +5,7 @@ const vite = await createServer({ server: { middlewareMode: true }, optimizeDeps
 
 try {
   const { buildCalendar, nextMeeting, validSemester } = await vite.ssrLoadModule('/src/utils/semester.ts');
+  const { todayAgenda } = await vite.ssrLoadModule('/src/utils/today.ts');
   const { EMPTY_ATTENDANCE, attendanceSummary, courseKey, setMark } = await vite.ssrLoadModule('/src/utils/attendance.ts');
   const { backupHash, decryptBackup, encryptBackup, newRecoveryCode } = await vite.ssrLoadModule('/src/services/backup.ts');
   const session = {
@@ -18,6 +19,20 @@ try {
   assert.equal(afterHours.offset, 7);
   assert.equal(afterHours.starts.getDate(), 29);
   assert.equal(nextMeeting([{ ...session, startTime: '25:00' }], new Date()), null);
+
+  const overlapping = { ...session, id: 'overlapping', startTime: '09:00', endTime: '09:30' };
+  const tomorrow = { ...session, id: 'tomorrow', day: 'الإثنين' };
+  const invalid = { ...session, id: 'invalid', endTime: '08:00' };
+  const agenda = (hours, minutes = 0) => todayAgenda([later, overlapping, session, tomorrow, invalid],
+    new Date(2026, 10, 22, hours, minutes)).map(({ session, gap, status }) => [session.id, gap, status]);
+  assert.deepEqual(agenda(9), [
+    [session.id, 0, 'ongoing'], [overlapping.id, 0, 'ongoing'], [later.id, 30, 'upcoming'],
+  ]);
+  assert.deepEqual(agenda(10, 15), [
+    [session.id, 0, 'ended'], [overlapping.id, 0, 'ended'], [later.id, 15, 'upcoming'],
+  ]);
+  assert.ok(agenda(12).every(([, , status]) => status === 'ended'));
+  assert.deepEqual(todayAgenda([session], new Date(2026, 10, 23, 8)), []);
 
   assert.equal(validSemester('2026-02-30', '2026-03-03'), false);
   assert.equal(validSemester('2026-09-20', '2026-07-01'), false);

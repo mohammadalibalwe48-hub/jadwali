@@ -10,7 +10,8 @@
     "test:import": "node tests/import-schedules.mjs",
     "test:vision": "node tests/vision-api.mjs",
     "test:pdf": "node tests/pdf-export.mjs",
-    "test:student-tools": "node tests/student-tools.mjs"
+    "test:student-tools": "node tests/student-tools.mjs",
+    "test:ui": "node tests/rebrand-ui.mjs"
   },
   "dependencies": {
     "@sparticuz/chromium": "^153.0.0",

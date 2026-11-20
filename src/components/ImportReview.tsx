@@ -1,9 +1,12 @@
+import { ImageThumbnails, ScanStatus } from './UploadDialog';
+import { useLocale } from '../locale';
 import { useRef, useState } from 'react';
-import { Loader2, Plus, RotateCw } from 'lucide-react';
+import { ClipboardCheck, Plus, RotateCw } from 'lucide-react';
 import { primaryStyle, secondaryStyle, ToolDialog } from './ToolDialog';
 import type { LectureSession } from '../types';
 
 interface Props {
+  files: File[];
   sessions: LectureSession[];
   notices: string[];
   busy: boolean;
@@ -13,33 +16,34 @@ interface Props {
   onImport: (sessions: LectureSession[]) => void;
 }
 
-export function ImportReview({ sessions, notices, busy, onClose, onAddImages, onRetry, onImport }: Props) {
+export function ImportReview({ files, sessions, notices, busy, onClose, onAddImages, onRetry, onImport }: Props) {
+  const { t, dayName, typeName, locationName } = useLocale();
   const input = useRef<HTMLInputElement>(null);
   const [excluded, setExcluded] = useState<Set<string>>(() => new Set());
   const selected = sessions.filter(({ id }) => !excluded.has(id));
 
   return (
-    <ToolDialog title="مراجعة استيراد الجدول" onClose={onClose} closeLabel="إغلاق المراجعة" closeDisabled={busy} size="wide" footer={
+    <ToolDialog title={t("مراجعة استيراد الجدول")} onClose={onClose} closeLabel={t("إغلاق المراجعة")} closeDisabled={busy} size="wide" icon={ClipboardCheck} footer={
       <>
         <span className="flex items-center gap-2 text-xs text-[var(--muted)]" aria-live="polite">
-          {busy ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> جاري قراءة الصور…</> : `المحدّد ${selected.length} من ${sessions.length}`}
+          {!busy && t(`المحدّد ${selected.length} من ${sessions.length}`, `${selected.length} of ${sessions.length} selected`)}
         </span>
-        <button type="button" disabled={busy || !selected.length} onClick={() => onImport(selected)} className={primaryStyle}>
-          إضافة المحدّد
-        </button>
+        <button type="button" disabled={busy || !selected.length} onClick={() => onImport(selected)} className={primaryStyle}>{t("إضافة المحدّد")}</button>
       </>
     }>
-      {(notices.length > 0 || sessions.length === 0) && (
-        <div role="status" className="space-y-1 rounded-md bg-[var(--soft)] px-4 py-3 text-sm">
+      {busy && <ScanStatus />}
+      {!busy && <details className="review-files"><summary>{t('الصور المصدر', 'Source images')} <bdi>({files.length})</bdi></summary><ImageThumbnails files={files} /></details>}
+      {!busy && (notices.length > 0 || sessions.length === 0) && (
+        <div role={onRetry ? 'alert' : 'status'} className={`notice ${onRetry ? 'notice-error' : 'notice-warning'}`}>
           {(notices.length ? notices : ['لم تظهر محاضرات كاملة. أضف صوراً أوضح للجدول.'])
-            .map((notice) => <p key={notice}>{notice}</p>)}
+            .map((notice) => <p key={notice}>{t(notice)}</p>)}
         </div>
       )}
 
-      {sessions.length > 0 && (
-        <div className="divide-y divide-[var(--line)] rounded-md border border-[var(--line)]">
+      {!busy && sessions.length > 0 && (
+        <div className="review-list">
           {sessions.map((session) => (
-            <label key={session.id} className="flex cursor-pointer items-center gap-3 px-3 py-2.5 text-sm">
+            <label key={session.id} className="review-row">
               <input type="checkbox" disabled={busy} checked={!excluded.has(session.id)}
                 onChange={(event) => {
                   const checked = event.target.checked;
@@ -51,12 +55,12 @@ export function ImportReview({ sessions, notices, busy, onClose, onAddImages, on
                   });
                 }} className="h-4 w-4 accent-[var(--brand)]" />
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold">{session.courseName}</span>
+                <span className="block font-semibold" dir="auto">{session.courseName}</span>
                 <span className="flex flex-wrap items-center gap-x-2 text-xs text-[var(--muted)]">
-                  <span>{session.day}</span>
+                  <span>{dayName(session.day)}</span>
                   <span dir="ltr">{session.startTime}–{session.endTime}</span>
-                  <span dir="auto">{session.room}</span>
-                  <span>{session.type}</span>
+                  <span dir="auto">{locationName(session.room)}</span>
+                  <span>{typeName(session.type)}</span>
                 </span>
               </span>
             </label>
@@ -64,7 +68,7 @@ export function ImportReview({ sessions, notices, busy, onClose, onAddImages, on
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      {!busy && <div className="flex flex-wrap gap-2">
         <input ref={input} type="file" accept="image/*" multiple className="hidden" onChange={(event) => {
           const added = Array.from(event.target.files ?? []);
           event.target.value = '';
@@ -72,15 +76,13 @@ export function ImportReview({ sessions, notices, busy, onClose, onAddImages, on
         }} />
         <button type="button" disabled={busy} onClick={() => input.current?.click()}
           className={secondaryStyle}>
-          <Plus className="h-4 w-4" /> أضف لقطات لهذا الجدول
-        </button>
+          <Plus className="h-4 w-4" />{' ' + t("أضف لقطات لهذا الجدول")}</button>
         {onRetry && (
           <button type="button" disabled={busy} onClick={onRetry}
             className={secondaryStyle}>
-            <RotateCw className="h-4 w-4" /> أعد القراءة
-          </button>
+            <RotateCw className="h-4 w-4" />{' ' + t("أعد القراءة")}</button>
         )}
-      </div>
+      </div>}
     </ToolDialog>
   );
 }
