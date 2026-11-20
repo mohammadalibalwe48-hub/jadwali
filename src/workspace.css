@@ -1,12 +1,11 @@
-.jadwali-workspace { min-height: 100dvh; }
+.jadwali-workspace { min-height: 100dvh; background: var(--page); }
 .jadwali-workspace[data-state="welcome"] {
-  background: radial-gradient(ellipse 850px 520px at 79% 5%, #306cee, transparent 100%),
-    linear-gradient(148deg, #123fab, #102867 90%);
+  background: radial-gradient(ellipse 850px 520px at 79% 5%, var(--page-glow), transparent),
+    var(--page);
 }
 .workspace-header { border-block-end: 1px solid #c0d2ff30; background: var(--navy); color: var(--on-blue); }
-.jadwali-workspace[data-state="welcome"] .workspace-header { background: #0e2a8054; }
 @media (display-mode: standalone) {
-  html, .jadwali-workspace[data-state="welcome"] .workspace-header { background: var(--navy); }
+  html { background: var(--navy); }
 }
 .workspace-header-inner,
 .workspace-content {

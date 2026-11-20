@@ -1,6 +1,7 @@
 :root {
   color-scheme: light;
-  --page: #f3f6ff;
+  --page: #f7efe3;
+  --page-glow: #fffaf3;
   --surface: #fff;
   --ink: #14254d;
   --muted: #495c80;
@@ -141,7 +142,7 @@
   margin-inline-start: -3%;
   border-start-start-radius: 41% 42%;
   border-end-start-radius: 58% 52%;
-  background: radial-gradient(ellipse at 55% 53%, white 30%, #edf3ff 90%);
+  background: radial-gradient(ellipse at 55% 53%, white 30%, var(--page) 90%);
 }
 .welcome-art img { display: block; width: 100%; max-width: 620px; height: auto; }
 :dir(rtl) .welcome-art img { transform: scaleX(-1); }
