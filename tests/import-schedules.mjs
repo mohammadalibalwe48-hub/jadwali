@@ -140,6 +140,7 @@ let navigation = 0;
 let expectedImageCount = 1;
 let scanResponse = { sessions: [], issues: [] };
 let scanStatus = 200;
+let responseGate;
 await page.setRequestInterception(true);
 page.on('request', async (request) => {
   if (new URL(request.url()).pathname !== '/api/vision') return request.continue();
@@ -150,6 +151,7 @@ page.on('request', async (request) => {
   assert.deepEqual(Object.keys(body), ['images']);
   assert.equal(body.images.length, expectedImageCount);
   assert.ok(body.images.every((image) => image.startsWith('data:image/jpeg;base64,')));
+  if (responseGate) await responseGate;
   await request.respond({ status: scanStatus, contentType: 'application/json', body: JSON.stringify(scanResponse) });
 });
 
@@ -167,13 +169,33 @@ async function upload(files, keepReview = false) {
     const url = new URL(process.env.JADWALI_TEST_URL ?? 'http://localhost:5173');
     url.searchParams.set('test', String(++navigation));
     await page.goto(url.toString());
+    await page.click('.welcome .button-coral');
   }
   const selector = keepReview ? 'dialog input[type=file]' : 'input[type=file]';
   const input = await page.waitForSelector(selector);
+  const previousRequests = scanRequests;
   await input.uploadFile(...files);
+  if (!keepReview) {
+    await page.waitForSelector('.file-list img');
+    assert.equal(scanRequests, previousRequests, 'Selecting images should not start OCR');
+    if (previousRequests === 0) {
+      let release;
+      responseGate = new Promise((resolve) => { release = resolve; });
+      try {
+        await page.click('[data-scan-images]');
+        await page.waitForSelector('.scan-status', { visible: true });
+        assert.equal(await page.$('.review-list'), null);
+      } finally {
+        release();
+        responseGate = undefined;
+      }
+    } else {
+      await page.click('[data-scan-images]');
+    }
+  }
   await page.waitForFunction(() => {
     const dialog = document.querySelector('dialog[open]');
-    return dialog && !dialog.textContent.includes('جاري قراءة الصور');
+    return dialog && dialog.textContent.includes('مراجعة استيراد الجدول') && !dialog.querySelector('.scan-status');
   }, { timeout: 90000 });
 }
 

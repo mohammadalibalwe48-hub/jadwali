@@ -1,3 +1,4 @@
+import { displayLocation, displayType, type Locale } from '../localeText';
 import { DAYS_ORDER, type LectureSession } from '../types';
 
 const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -69,7 +70,7 @@ function fold(line: string) {
   return result;
 }
 
-export function buildCalendar(sessions: LectureSession[], from: string, through: string, reminder: number, now = new Date()) {
+export function buildCalendar(sessions: LectureSession[], from: string, through: string, reminder: number, now = new Date(), locale: Locale = 'ar') {
   if (!validSemester(from, through) || ![0, 5, 10, 15, 30, 60].includes(reminder)) {
     throw new Error('Invalid calendar dates or reminder');
   }
@@ -86,8 +87,8 @@ export function buildCalendar(sessions: LectureSession[], from: string, through:
     if (first > end) continue;
     const count = Math.floor((+end - +first) / (7 * DAY_MS)) + 1;
     const date = first.toISOString().slice(0, 10).replaceAll('-', '');
-    const name = `${session.courseName} (${session.type})`;
-    const location = [session.room, session.floor].filter((part) => part && part !== '—').join(' · ');
+    const name = `${session.courseName} (${displayType(session.type, locale)})`;
+    const location = [session.room, session.floor].filter((part) => part && part !== '—').map((part) => displayLocation(part, locale)).join(' · ');
     lines.push('BEGIN:VEVENT',
       `UID:${encodeURIComponent(session.id)}-${from}@jadwali.app`,
       `DTSTAMP:${stamp}`,

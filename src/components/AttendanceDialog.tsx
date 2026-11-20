@@ -1,19 +1,17 @@
+import { ClipboardCheck } from 'lucide-react';
+import { useLocale } from '../locale';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import type { LectureSession } from '../types';
-import { attendanceSummary, setMark, type Attendance, type AttendanceMark } from '../utils/attendance';
+import { attendanceSummary, type Attendance } from '../utils/attendance';
 import { DAYS_ORDER } from '../types';
 import { localDate, parseCivilDate } from '../utils/semester';
+import { AttendanceControls } from './AttendanceControls';
 import { fieldStyle, ToolDialog } from './ToolDialog';
-
-const marks: { value: AttendanceMark; label: string; active: string }[] = [
-  { value: 'present', label: 'حاضر', active: 'bg-[#D8EFE4] text-[#15382D] border-[#96BDAA]' },
-  { value: 'late', label: 'متأخر', active: 'bg-[#FAECCC] text-[#664508] border-[#DEC080]' },
-  { value: 'missed', label: 'غائب', active: 'bg-[#FCE3E0] text-[#831F18] border-[#E1AEAA]' },
-];
 
 export function AttendanceDialog({ sessions, attendance, onChange, onClose }: {
   sessions: LectureSession[]; attendance: Attendance; onChange: Dispatch<SetStateAction<Attendance>>; onClose: () => void;
 }) {
+  const { t, typeName } = useLocale();
   const today = localDate();
   const [date, setDate] = useState(today);
   const civilDate = parseCivilDate(date);
@@ -34,38 +32,29 @@ export function AttendanceDialog({ sessions, attendance, onChange, onClose }: {
   }
 
   return (
-    <ToolDialog title="متابعة الحضور" onClose={onClose}>
-      <label className="grid gap-1 text-xs font-bold">تاريخ المحاضرات
-        <input type="date" dir="ltr" max={today} value={date} className={fieldStyle} onChange={(event) => setDate(event.target.value)} />
+    <ToolDialog title={t("متابعة الحضور")} icon={ClipboardCheck} onClose={onClose}>
+      <label className="grid gap-1 text-xs font-bold">{t("تاريخ المحاضرات")}<input type="date" dir="ltr" max={today} value={date} className={fieldStyle} onChange={(event) => setDate(event.target.value)} />
       </label>
-      {meetings.length === 0 && <p className="text-sm text-[var(--muted)]">{canMark ? 'لا توجد محاضرات في هذا اليوم.' : 'اختر اليوم أو تاريخاً سابقاً.'}</p>}
-      {meetings.map((session) => {
-        const current = attendance.records.find((record) => record.sessionId === session.id && record.date === date)?.mark;
-        return (
-          <div key={session.id} className="space-y-2 rounded-md border border-[var(--line)] bg-white p-3">
-            <div className="flex flex-wrap items-baseline justify-between gap-1.5 text-sm">
-              <span className="font-bold">{session.courseName} <span className="text-xs font-medium text-[var(--muted)]">· {session.type}</span></span>
-              <bdi className="font-mono-num text-xs">{session.startTime} – {session.endTime}</bdi>
-            </div>
-            <div role="group" aria-label={session.courseName} className="grid grid-cols-3 gap-1.5">
-              {marks.map((mark) => <button type="button" key={mark.value} aria-pressed={current === mark.value}
-                className={`rounded-md border px-1 py-2 text-xs font-bold ${current === mark.value ? mark.active : 'border-[var(--line)] bg-[var(--soft)]'}`}
-                onClick={() => onChange((previous) => setMark(previous, session, date, mark.value))}>{mark.label}</button>)}
-            </div>
+      {meetings.length === 0 && <p className="text-sm text-[var(--muted)]">{canMark ? t("لا توجد محاضرات في هذا اليوم.") : t("اختر اليوم أو تاريخاً سابقاً.")}</p>}
+      {meetings.map((session) => (
+        <div key={session.id} className="space-y-2 rounded-md border border-[var(--line)] bg-white p-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-1.5 text-sm">
+            <span className="font-bold">{session.courseName} <span className="text-xs font-medium text-[var(--muted)]">· {typeName(session.type)}</span></span>
+            <bdi className="font-mono-num text-xs">{session.startTime} – {session.endTime}</bdi>
           </div>
-        );
-      })}
+          <AttendanceControls session={session} date={date} attendance={attendance} onChange={onChange} />
+        </div>
+      ))}
       {summary.length > 0 && <section className="space-y-2 border-t border-[var(--line)] pt-4">
-        <h3 className="text-sm font-bold">الغياب حسب المادة</h3>
-        <p className="text-xs text-[var(--muted)]">حدّد الغيابات المسموحة لكل مادة. يُسجّل التأخّر بشكل منفصل.</p>
+        <h3 className="text-sm font-bold">{t("الغياب حسب المادة")}</h3>
+        <p className="text-xs text-[var(--muted)]">{t("حدّد الغيابات المسموحة لكل مادة. يُسجّل التأخّر بشكل منفصل.")}</p>
         {summary.map((course) => <div key={course.key} className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-white p-3">
           <div className="space-y-1">
             <p className="text-sm font-bold">{course.name}</p>
-            <p className="text-xs text-[var(--muted)]">{course.present} حضور · {course.late} تأخّر · {course.missed} غياب</p>
-            {course.remaining !== undefined && <p className={`text-xs font-bold ${course.remaining === 0 ? 'text-red-800' : 'text-[#235047]'}`}>الغيابات المتبقية {course.remaining}</p>}
+            <p className="text-xs text-[var(--muted)]">{course.present}{' ' + t("حضور ·") + ' '}{course.late}{' ' + t("تأخّر ·") + ' '}{course.missed}{' ' + t("غياب")}</p>
+            {course.remaining !== undefined && <p className={`text-xs font-bold ${course.remaining === 0 ? 'text-red-800' : 'text-[var(--success)]'}`}>{t("الغيابات المتبقية") + ' '}{course.remaining}</p>}
           </div>
-          <label className="grid w-24 gap-1 text-[11px] font-bold">حدّ الغياب
-            <input aria-label={`حدّ الغياب ${course.name}`} className={fieldStyle} type="number" min={0} max={100} step={1} inputMode="numeric"
+          <label className="grid w-24 gap-1 text-[11px] font-bold">{t("حدّ الغياب")}<input aria-label={t(`حدّ الغياب ${course.name}`, `Absence limit for ${course.name}`)} className={fieldStyle} type="number" min={0} max={100} step={1} inputMode="numeric"
               placeholder="—" value={course.limit ?? ''} onChange={(event) => updateLimit(course.key, event.target.value)} />
           </label>
         </div>)}

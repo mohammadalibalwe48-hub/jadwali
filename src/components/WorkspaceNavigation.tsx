@@ -1,5 +1,7 @@
+import { Wordmark } from './Brand';
+import { useLocale } from '../locale';
 import {
-  CalendarDays, CalendarRange, ChevronLeft, ClipboardCheck, Cloud, Download, FileText, Image, Layers, MoreHorizontal, Settings2, Smartphone,
+  CalendarDays, CalendarRange, ChevronLeft, Globe2, ClipboardCheck, Cloud, Download, FileText, Image, Layers, MoreHorizontal, Settings2, Smartphone,
 } from 'lucide-react';
 import { ToolDialog } from './ToolDialog';
 
@@ -25,22 +27,27 @@ interface NavigationProps {
 }
 
 export function WorkspaceNavigation({ onTool, onSchedule }: NavigationProps) {
+  const { t, locale, setLocale } = useLocale();
   return (
     <header className="workspace-header">
       <div className="workspace-header-inner">
-        <button className="workspace-brand" type="button" onClick={onSchedule} aria-label="جدولي، الصفحة الرئيسية">
-          <span className="brand-mark"><CalendarRange size={19} aria-hidden="true" /></span>
-          <span>جدولي</span>
+        <button className="workspace-brand" type="button" onClick={onSchedule} aria-label={t("جدولي، الصفحة الرئيسية")}>
+          <Wordmark />
         </button>
-        <nav className="workspace-nav" aria-label="التنقّل الرئيسي">
-          <button type="button" className="workspace-nav-item" aria-current="page" onClick={onSchedule}><CalendarDays size={17} aria-hidden="true" />الجدول</button>
+        <nav className="workspace-nav" aria-label={t("التنقّل الرئيسي")}>
+          <button type="button" className="workspace-nav-item" aria-current="page" onClick={onSchedule}><CalendarDays size={17} aria-hidden="true" />{t("الجدول")}</button>
           <button type="button" className="workspace-nav-item" aria-haspopup="dialog"
-            onClick={(event) => onTool('attendance', event.currentTarget)}><ClipboardCheck size={17} aria-hidden="true" />الحضور</button>
-          <button type="button" className="workspace-nav-item nav-export" aria-label="التصدير" aria-haspopup="dialog"
-            onClick={(event) => onTool('export', event.currentTarget)}><Download size={17} aria-hidden="true" />التصدير</button>
-          <button type="button" className="workspace-nav-item nav-more" aria-label="المزيد" aria-haspopup="dialog"
-            onClick={(event) => onTool('more', event.currentTarget)}><MoreHorizontal size={21} aria-hidden="true" /><span>المزيد</span></button>
+            onClick={(event) => onTool('attendance', event.currentTarget)}><ClipboardCheck size={17} aria-hidden="true" />{t("الحضور")}</button>
+          <button type="button" className="workspace-nav-item nav-export" aria-label={t("التصدير")} aria-haspopup="dialog"
+            onClick={(event) => onTool('export', event.currentTarget)}><Download size={17} aria-hidden="true" />{t("التصدير")}</button>
+          <button type="button" className="workspace-nav-item nav-more" aria-label={t("المزيد")} aria-haspopup="dialog"
+            onClick={(event) => onTool('more', event.currentTarget)}><MoreHorizontal size={21} aria-hidden="true" /><span>{t("المزيد")}</span></button>
         </nav>
+        <button type="button" className="language-switch" lang={locale === 'ar' ? 'en' : 'ar'}
+          aria-label={t('التبديل إلى الإنجليزية', 'Switch to Arabic')}
+          onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}>
+          <Globe2 size={17} aria-hidden="true" />{locale === 'ar' ? 'English' : 'العربية'}
+        </button>
       </div>
     </header>
   );
@@ -49,17 +56,18 @@ export function WorkspaceNavigation({ onTool, onSchedule }: NavigationProps) {
 export function WorkspaceMenu({ type, hasSchedule, onTool, onClose }: {
   type: 'export' | 'more'; hasSchedule: boolean; onTool: (tool: WorkspaceTool) => void; onClose: () => void;
 }) {
+  const { t } = useLocale();
   const exportMenu = type === 'export';
   const options = exportMenu ? exportOptions : moreOptions;
 
   return (
-    <ToolDialog title={exportMenu ? 'تصدير الجدول' : 'المزيد'} onClose={onClose}>
-      {exportMenu && !hasSchedule ? <p className="dialog-note">أضف محاضرة إلى جدولك لتتمكّن من تصديره.</p> : (
+    <ToolDialog title={exportMenu ? t("تصدير الجدول") : t("المزيد")} icon={exportMenu ? Download : MoreHorizontal} onClose={onClose}>
+      {exportMenu && !hasSchedule ? <p className="dialog-note">{t("أضف محاضرة إلى جدولك لتتمكّن من تصديره.")}</p> : (
         <div className="workspace-menu">
           {options.map(({ id, label, Icon, detail }) => (
             <button key={id} type="button" className="workspace-menu-option" onClick={() => onTool(id)}>
               <Icon className="menu-icon" size={19} aria-hidden="true" />
-              <span className="workspace-menu-copy"><strong>{label}</strong><small>{detail}</small></span>
+              <span className="workspace-menu-copy"><strong>{t(label)}</strong><small>{t(detail)}</small></span>
               <ChevronLeft className="menu-arrow" size={15} aria-hidden="true" />
             </button>
           ))}

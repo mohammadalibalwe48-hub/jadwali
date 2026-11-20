@@ -6,6 +6,7 @@ import { renderScheduleVectorPdf } from '../server/pdfGenerator.js';
 const maxBodyBytes = 1_000_000;
 const label = z.string().max(300);
 const timetable = z.object({
+  locale: z.enum(['ar', 'en']).optional(),
   metadata: z.object({ title: label.optional(), subtitle: label.optional(), semester: label.optional() }).optional(),
   sessions: z.array(z.object({
     day: z.enum(DAYS_ORDER),
@@ -41,7 +42,7 @@ async function readBody(req: IncomingMessage & { body?: unknown }): Promise<unkn
   return Buffer.concat(chunks).toString('utf8');
 }
 
-function sendError(res: ServerResponse, status: number, message: string, forBrowser: boolean) {
+function sendError(res: ServerResponse, status: number, message: string, forBrowser: boolean, locale: 'ar' | 'en' = 'ar') {
   res.statusCode = status;
   if (!forBrowser) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -49,11 +50,12 @@ function sendError(res: ServerResponse, status: number, message: string, forBrow
     return;
   }
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.end(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+  const title = locale === 'en' ? 'Could not export the timetable' : 'تعذّر تصدير الجدول';
+  res.end(`<!doctype html><html lang="${locale}" dir="${locale === 'en' ? 'ltr' : 'rtl'}"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>تعذّر تصدير الجدول</title>
-    <style>body{margin:10vh auto;padding:0 1.5rem;max-width:34rem;font:1.05rem system-ui,sans-serif;color:#153532}a{color:inherit}</style>
-    </head><body><h1>تعذّر تصدير الجدول</h1><p>${message}</p><p><a href="/">العودة إلى جدولي</a></p></body></html>`);
+    <title>${title}</title>
+    <style>body{margin:10vh auto;padding:0 1.5rem;max-width:34rem;font:1.05rem system-ui,sans-serif;color:#14254d;background:#f3f6ff}a{color:#154cce}</style>
+    </head><body><h1>${title}</h1><p>${locale === 'en' ? 'Return to Jadwali and try exporting again.' : message}</p><p><a href="/">${locale === 'en' ? 'Back to Jadwali' : 'العودة إلى جدولي'}</a></p></body></html>`);
 }
 
 export default async function handler(req: IncomingMessage & { body?: unknown }, res: ServerResponse) {
@@ -74,20 +76,23 @@ export default async function handler(req: IncomingMessage & { body?: unknown },
 
   let data: z.infer<typeof timetable>;
   let disposition = 'attachment';
+  let locale: 'ar' | 'en' = 'ar';
   try {
     const raw = await readBody(req);
     if (forBrowser) {
       const form = new URLSearchParams(typeof raw === 'string' ? raw : z.record(z.string(), z.string()).parse(raw));
+      locale = form.get('locale') === 'en' ? 'en' : 'ar';
       data = timetable.parse(JSON.parse(form.get('payload') ?? ''));
       if (form.get('disposition') === 'inline') disposition = 'inline';
     } else {
       data = timetable.parse(typeof raw === 'string' ? JSON.parse(raw) : raw);
     }
+    locale = data.locale ?? locale;
   } catch (error) {
     if (error instanceof RangeError) {
       return sendError(res, 413, 'الجدول أكبر من الحد المسموح للتصدير.', forBrowser);
     }
-    return sendError(res, 400, 'تعذّرت قراءة بيانات الجدول. افتح جدولي وحاول مرة أخرى.', forBrowser);
+    return sendError(res, 400, 'تعذّرت قراءة بيانات الجدول. افتح جدولي وحاول مرة أخرى.', forBrowser, locale);
   }
 
   try {
@@ -100,6 +105,6 @@ export default async function handler(req: IncomingMessage & { body?: unknown },
     res.end(pdf);
   } catch (error) {
     console.error('PDF generation failed:', error instanceof Error ? error.message : 'unknown error');
-    sendError(res, 500, 'تعذّر إنشاء الملف. حاول مرة أخرى.', forBrowser);
+    sendError(res, 500, 'تعذّر إنشاء الملف. حاول مرة أخرى.', forBrowser, locale);
   }
 }
