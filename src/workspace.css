@@ -5,6 +5,9 @@
 }
 .workspace-header { border-block-end: 1px solid #c0d2ff30; background: var(--navy); color: var(--on-blue); }
 .jadwali-workspace[data-state="welcome"] .workspace-header { background: #0e2a8054; }
+@media (display-mode: standalone) {
+  html, .jadwali-workspace[data-state="welcome"] .workspace-header { background: var(--navy); }
+}
 .workspace-header-inner,
 .workspace-content {
   max-width: 1240px;
@@ -12,7 +15,15 @@
   padding-left: max(28px, env(safe-area-inset-left));
   padding-right: max(28px, env(safe-area-inset-right));
 }
-.workspace-header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 72px; }
+.workspace-header-inner {
+  --header-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  padding-block-start: env(safe-area-inset-top, 0px);
+}
 .workspace-brand { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; font-size: 29px; font-weight: 600; line-height: 1; }
 .workspace-nav { display: flex; align-items: stretch; gap: 5px; }
 .workspace-nav-item {
@@ -342,7 +353,7 @@
     padding-left: max(14px, env(safe-area-inset-left));
     padding-right: max(14px, env(safe-area-inset-right));
   }
-  .workspace-header-inner { min-height: calc(56px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
+  .workspace-header-inner { --header-height: 56px; }
   .workspace-brand { font-size: 24px; gap: 7px; }
   .workspace-nav {
     position: fixed;
