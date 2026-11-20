@@ -2,52 +2,52 @@
   <title>Schedule image becoming an organized timetable</title>
   <defs>
     <linearGradient id="platform" x1="206" y1="350" x2="565" y2="325" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2A71F4"/><stop offset="1" stop-color="#101F83"/>
+      <stop stop-color="#80639f"/><stop offset="1" stop-color="#3a2a61"/>
     </linearGradient>
     <linearGradient id="beam" x1="270" y1="148" x2="386" y2="336" gradientUnits="userSpaceOnUse">
       <stop stop-color="#30D9F4" stop-opacity=".18"/><stop offset=".8" stop-color="#1BC8EC" stop-opacity=".68"/><stop offset="1" stop-color="#12AAD9" stop-opacity=".12"/>
     </linearGradient>
     <linearGradient id="paper" x1="111" y1="115" x2="268" y2="265" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#fff"/><stop offset="1" stop-color="#E2EBFF"/>
+      <stop stop-color="#fff"/><stop offset="1" stop-color="#f7e8de"/>
     </linearGradient>
     <filter id="shadow" x="-30%" y="-40%" width="160%" height="200%">
-      <feDropShadow dx="1" dy="18" stdDeviation="15" flood-color="#133C93" flood-opacity=".17"/>
+      <feDropShadow dx="1" dy="18" stdDeviation="15" flood-color="#534160" flood-opacity=".17"/>
     </filter>
   </defs>
-  <path d="M34 377 334 470 635 351 339 261Z" fill="#E6EEFF"/>
-  <path d="M76 373 334 452 597 350 340 273Z" stroke="#C5D8FF" stroke-width="1.5" stroke-dasharray="4 7"/>
-  <path d="M125 389 390 291m-211 115 265-99m-212 115 266-100m-214 116 267-99m-420 16 269 81m-214-103 270 82m-214-103 270 82m-214-103 270 82" stroke="#D6E3FF"/>
+  <path d="M34 377 334 470 635 351 339 261Z" fill="#f3e3dc"/>
+  <path d="M76 373 334 452 597 350 340 273Z" stroke="#dbc5ce" stroke-width="1.5" stroke-dasharray="4 7"/>
+  <path d="M125 389 390 291m-211 115 265-99m-212 115 266-100m-214 116 267-99m-420 16 269 81m-214-103 270 82m-214-103 270 82m-214-103 270 82" stroke="#e9d8e0"/>
   <g filter="url(#shadow)">
     <path d="M228 328 416 399 588 314v30a12 12 0 0 1-7 11l-157 77a17 17 0 0 1-13 1l-175-65a12 12 0 0 1-8-11Z" fill="url(#platform)"/>
-    <path d="M228 328 403 245l185 69-171 85Z" fill="#5588FF"/>
-    <path d="M244 328 403 253l171 63-157 76Z" stroke="#83ADFF" stroke-width="2"/>
+    <path d="M228 328 403 245l185 69-171 85Z" fill="#8b71aa"/>
+    <path d="M244 328 403 253l171 63-157 76Z" stroke="#bda5d2" stroke-width="2"/>
     <path d="m425 393 149-73v12l-149 74Z" fill="#21C5F0"/>
   </g>
   <g filter="url(#shadow)">
-    <path d="m285 246 130-61 130 49v61l-130 64-130-49Z" fill="#D6E3FF"/>
-    <path d="m415 298 130-64v61l-130 64Z" fill="#ABBEF0"/>
+    <path d="m285 246 130-61 130 49v61l-130 64-130-49Z" fill="#e9d8e0"/>
+    <path d="m415 298 130-64v61l-130 64Z" fill="#bfaccf"/>
     <path d="m285 246 130-61 130 49-130 64Z" fill="#fff"/>
-    <path d="m285 246 130-61 130 49-130 64Z" stroke="#EEF4FF" stroke-width="2"/>
-    <path d="m285 246 130-61 130 49-130 64Z" fill="#F8FBFF"/>
-    <path d="m301 247 114-54 113 43-113 54Z" fill="#EAF1FF"/>
-    <path d="m304 246 111-52 113 42-17 8-112-42-78 37Z" fill="#194BC5"/>
-    <path d="m347 228 24 9-27 13-24-9Z" fill="#97B8FF"/>
+    <path d="m285 246 130-61 130 49-130 64Z" stroke="#fff8ef" stroke-width="2"/>
+    <path d="m285 246 130-61 130 49-130 64Z" fill="#fffaf2"/>
+    <path d="m301 247 114-54 113 43-113 54Z" fill="#f0e3ec"/>
+    <path d="m304 246 111-52 113 42-17 8-112-42-78 37Z" fill="#5c487f"/>
+    <path d="m347 228 24 9-27 13-24-9Z" fill="#ad98cc"/>
     <path d="m388 208 27 10-28 13-25-9Z" fill="#FFD16B"/>
     <path d="m388 244 26 10-27 13-26-10Z" fill="#FF7290"/>
     <path d="m426 225 26 10-28 13-26-9Z" fill="#35C6EB"/>
-    <path d="m425 261 27 10-28 13-26-10Z" fill="#9BB9FF"/>
-    <path d="m467 242 26 10-28 13-26-9Z" fill="#5C82F2"/>
-    <path d="m314 283 43 16m-43-6 31 12m-31 0 52 20" stroke="#8DA5D9" stroke-width="3" stroke-linecap="round"/>
+    <path d="m425 261 27 10-28 13-26-10Z" fill="#bca5cb"/>
+    <path d="m467 242 26 10-28 13-26-9Z" fill="#8d74b2"/>
+    <path d="m314 283 43 16m-43-6 31 12m-31 0 52 20" stroke="#9c8ab4" stroke-width="3" stroke-linecap="round"/>
   </g>
   <path d="M247 118 316 142 387 259 328 282Z" fill="url(#beam)"/>
   <path d="m252 130 61 21 68 108-49 22Z" stroke="#36CBEF" stroke-width="1.5" stroke-dasharray="4 5"/>
   <g filter="url(#shadow)">
-    <path d="m79 87 24-21 163 59v143l-24 22L79 230Z" fill="#194BC5"/>
-    <path d="m79 87 24-21 163 59-24 22Z" fill="#6896FF"/>
+    <path d="m79 87 24-21 163 59v143l-24 22L79 230Z" fill="#5c487f"/>
+    <path d="m79 87 24-21 163 59-24 22Z" fill="#9b84ba"/>
     <path d="m79 87 163 60v143L79 230Z" fill="url(#paper)"/>
-    <path d="m96 112 121 45v20L96 132Z" fill="#285AD0"/>
-    <path d="m96 145 121 45m-121-31 121 45m-121-31 121 45m-121-31 121 45m-121-31 121 45m-121-31 121 45m-80-92v83m42-68v83" stroke="#B3C6EF" stroke-width="2"/>
-    <path d="m104 150 24 9m18 20 24 9m19 20 20 8m-105-36 24 8m18 22 24 9" stroke="#5874AF" stroke-width="3" stroke-linecap="round"/>
+    <path d="m96 112 121 45v20L96 132Z" fill="#715b91"/>
+    <path d="m96 145 121 45m-121-31 121 45m-121-31 121 45m-121-31 121 45m-121-31 121 45m-121-31 121 45m-80-92v83m42-68v83" stroke="#c6aec6" stroke-width="2"/>
+    <path d="m104 150 24 9m18 20 24 9m19 20 20 8m-105-36 24 8m18 22 24 9" stroke="#806a99" stroke-width="3" stroke-linecap="round"/>
     <path d="m87 172 144 54" stroke="#20CBF4" stroke-width="3" stroke-linecap="round"/>
   </g>
   <g filter="url(#shadow)">
@@ -55,6 +55,6 @@
     <path d="m536 165 20-10 22 9-20 10Z" fill="#FFE5A4"/><path d="m536 165 22 9v22l-22-9Z" fill="#FFD16B"/><path d="m558 174 20-10v22l-20 10Z" fill="#F5A73C"/>
     <path d="m349 85 16-8 17 6-16 8Z" fill="#ABF3FF"/><path d="m349 85 17 6v16l-17-6Z" fill="#22C9EA"/><path d="m366 91 16-8v16l-16 8Z" fill="#159BCF"/>
   </g>
-  <path d="M477 139v24m81 42v15m-191-108v14" stroke="#9EB9F0" stroke-width="1.5" stroke-dasharray="3 5"/>
-  <path d="M323 110v14m-7-7h14m258 122v14m-7-7h14m-399 86v10m-5-5h10" stroke="#467FF2" stroke-width="2" stroke-linecap="round"/>
+  <path d="M477 139v24m81 42v15m-191-108v14" stroke="#bca8cf" stroke-width="1.5" stroke-dasharray="3 5"/>
+  <path d="M323 110v14m-7-7h14m258 122v14m-7-7h14m-399 86v10m-5-5h10" stroke="#947eb0" stroke-width="2" stroke-linecap="round"/>
 </svg>
