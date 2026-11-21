@@ -19,6 +19,7 @@ import { SessionEditorModal } from './components/SessionEditorModal';
 import { FloorRulesModal } from './components/FloorRulesModal';
 import { SettingsModal } from './components/SettingsModal';
 
+import { NextClass } from './components/NextClass';
 import { TodayView } from './components/TodayView';
 import { AttendanceDialog } from './components/AttendanceDialog';
 import { CalendarDialog } from './components/CalendarDialog';
@@ -308,7 +309,10 @@ export function App() {
           <button className="icon-button" type="button" aria-label={t('إغلاق التنبيه')} onClick={() => setStatusToast(null)}><X size={17} /></button>
         </div>}
         {hasSchedule ? <div className="workspace-grid">
-          <TodayView sessions={sessions} now={now} attendance={attendance} onAttendance={setAttendance} />
+          <div className="workspace-agenda">
+            <NextClass sessions={sessions} now={now} />
+            <TodayView sessions={sessions} now={now} attendance={attendance} onAttendance={setAttendance} />
+          </div>
           <ScheduleBoard groups={groups} today={today} selectedDay={selectedDay} onDay={setSelectedDay}
             view={viewMode} onView={setViewMode} onNew={onNew}
             onEdit={(session) => { setEditingSession(session); setIsEditorOpen(true); }} />

@@ -1,3 +1,4 @@
+import { CalendarClock, Clock3, Layers, MapPin } from 'lucide-react';
 import { useLocale } from '../locale';
 import type { LectureSession } from '../types';
 import { nextMeeting } from '../utils/semester';
@@ -20,16 +21,26 @@ export function NextClass({ sessions, now }: { sessions: LectureSession[]; now: 
   return (
     <section className="next-class" aria-labelledby="next-class-title">
       <div className="next-class-main">
-        <div className="next-class-heading">
-          <h3 id="next-class-title">{t("المحاضرة القادمة")}</h3>
-          <p className="next-class-countdown">{minutes > 0 ? t(`بعد ${countdown}`, `In ${countdown}`) : t("تبدأ الآن")}</p>
-        </div>
+        <h2 id="next-class-title"><CalendarClock size={18} aria-hidden="true" />{t("المحاضرة القادمة")}</h2>
         <p className="next-class-subject" dir="auto">{session.courseName}</p>
+        <p className="next-class-time">
+          <span>{date}</span>
+          <bdi dir="ltr">{session.startTime}–{session.endTime}</bdi>
+        </p>
+        <p className="next-class-countdown">
+          <Clock3 size={15} aria-hidden="true" />
+          <span>{minutes > 0 ? t(`بعد ${countdown}`, `In ${countdown}`) : t("تبدأ الآن")}</span>
+        </p>
       </div>
       <dl className="next-class-details">
-        <div><dt>{date}</dt><dd className="next-time"><bdi dir="ltr">{session.startTime}–{session.endTime}</bdi></dd></div>
-        <div><dt>{t("القاعة")}</dt><dd><bdi>{locationName(session.room || '—')}</bdi></dd></div>
-        <div><dt>{t("الطابق")}</dt><dd>{session.floor === 'غير محدّد' ? '—'  : locationName(session.floor || '—')}</dd></div>
+        <div>
+          <dt><MapPin size={15} aria-hidden="true" />{t("القاعة")}</dt>
+          <dd><bdi>{locationName(session.room || '—')}</bdi></dd>
+        </div>
+        <div>
+          <dt><Layers size={15} aria-hidden="true" />{t("الطابق")}</dt>
+          <dd><bdi>{session.floor === 'غير محدّد' ? '—' : locationName(session.floor || '—')}</bdi></dd>
+        </div>
       </dl>
     </section>
   );

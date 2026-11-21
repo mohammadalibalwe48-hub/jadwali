@@ -132,12 +132,19 @@ try {
   assert.equal(await page.$eval('html', (el) => el.dir), 'ltr');
   assert.match(await page.$eval('.agenda-day h3', (el) => el.textContent), /Sunday/);
   assert.match(await page.$eval('.today-location', (el) => el.textContent), /Second/);
+  assert.equal(await page.$eval('.next-class h2', (el) => el.textContent), 'Next class');
+  assert.equal(await page.$eval('.next-class-subject', (el) => el.textContent), classes[1].courseName);
+  assert.equal(await page.$eval('.next-class-time bdi', (el) => el.textContent), '10:30–12:00');
   await checkWidths('.schedule-board');
+  await checkWidths('.next-class');
   await capture([['jadwali-rebrand-schedule.png', 1440, 900]]);
 
   await click('.language-switch');
   await page.waitForFunction(() => document.documentElement.dir === 'rtl');
   await checkWidths('.schedule-board');
+  await checkWidths('.next-class');
+  assert.equal(await page.$eval('.next-class h2', (el) => el.textContent), 'المحاضرة القادمة');
+  assert.equal(await page.$eval('.next-class-time bdi', (el) => el.dir), 'ltr');
   await capture([['jadwali-rebrand-schedule-ar.png', 1440, 900], ['jadwali-rebrand-schedule-mobile.png', 390, 844]]);
   await click('.week-day[aria-label="الإثنين"]');
   assert.equal((await page.$$('.meeting-row')).length, 1);
