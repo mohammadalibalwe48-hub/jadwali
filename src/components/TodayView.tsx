@@ -7,7 +7,6 @@ import type { Attendance } from '../utils/attendance';
 import { localDate } from '../utils/semester';
 import { todayAgenda } from '../utils/today';
 import { AttendanceControls } from './AttendanceControls';
-import { NextClass } from './NextClass';
 
 export function TodayView({ sessions, now, attendance, onAttendance }: {
   sessions: LectureSession[];
@@ -49,7 +48,6 @@ export function TodayView({ sessions, now, attendance, onAttendance }: {
       <div className="today-heading">
         <Clock3 aria-hidden="true" size={20} /><h2 id="today-view-title">{t("جدول اليوم")}</h2>
       </div>
-      <NextClass sessions={sessions} now={now} />
       {remaining.length > 0 ? <ol className="today-meetings">{remaining.map(renderMeeting)}</ol> :
         <p className="today-empty">{completed.length ? t("انتهت محاضرات اليوم.") : t("لا توجد محاضرات اليوم.")}</p>}
       {completed.length > 0 && <details className="today-completed" key={date}>
