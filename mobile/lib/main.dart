@@ -10,16 +10,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'design.dart';
 import 'schedule.dart';
 import 'scanner_endpoint.dart';
-
-const ink = Color(0xff32291f);
-const clay = Color(0xff8b4c3b);
-const oat = Color(0xfff5eee4);
-const cream = Color(0xfffffdf8);
-const line = Color(0xffe4d5c5);
-const muted = Color(0xff695a4c);
-const sage = Color(0xffe6eddf);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +31,12 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
   final navigator = GlobalKey<NavigatorState>();
   final messenger = GlobalKey<ScaffoldMessengerState>();
   final picker = ImagePicker();
+
+  void selectTab(int value) {
+    if (value == tab) return;
+    setState(() => tab = value);
+  }
+
   late final Timer ticker;
   late bool onboarding, arabic;
   late String scanner;
@@ -195,17 +194,69 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
           displayColor: ink,
         ),
         dividerColor: line,
-        inputDecorationTheme: const InputDecorationTheme(
+        inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: cream,
-          border: OutlineInputBorder(),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(13),
+            borderSide: const BorderSide(color: line),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(13),
+            borderSide: const BorderSide(color: line),
+          ),
         ),
         filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(48, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
-        navigationBarTheme: const NavigationBarThemeData(
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(48, 50),
+            side: const BorderSide(color: line),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13),
+            ),
+          ),
+        ),
+        chipTheme: ChipThemeData(
           backgroundColor: cream,
-          indicatorColor: Color(0xffeed9c8),
+          selectedColor: const Color(0xffefdacf),
+          side: const BorderSide(color: line),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          showCheckmark: false,
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: oat,
+          showDragHandle: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          height: 68,
+          backgroundColor: espresso,
+          surfaceTintColor: Colors.transparent,
+          indicatorColor: sand,
+          labelTextStyle: const WidgetStatePropertyAll(
+            TextStyle(color: cream, fontSize: 11, fontWeight: FontWeight.w700),
+          ),
+          iconTheme: WidgetStateProperty.resolveWith(
+            (states) => IconThemeData(
+              color: states.contains(WidgetState.selected) ? espresso : sand,
+              size: 22,
+            ),
+          ),
         ),
       ),
       home: onboarding ? introScreen() : workspace(),
@@ -227,8 +278,8 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
         'اطّلع على محاضرتك القادمة وقاعتها وجدول الأسبوع في مكان واحد.',
       ),
       tr(
-        'Add classes by hand or scan screenshots with your Jadwali website.',
-        'أضف المحاضرات يدوياً أو امسح لقطات الجدول عبر موقع جدولي.',
+        'Add classes by hand or scan a screenshot of your timetable.',
+        'أضف المحاضرات يدوياً أو امسح لقطة من جدولك.',
       ),
       tr(
         'Mark attendance and share your schedule. Your timetable is available offline.',
@@ -280,53 +331,37 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          height: 226,
-                          width: double.infinity,
-                          clipBehavior: Clip.antiAlias,
-                          decoration: BoxDecoration(
-                            color: const Color(0xffdfbc9d),
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              ColorFiltered(
-                                colorFilter: const ColorFilter.mode(
-                                  Color(0xffb18a70),
-                                  BlendMode.color,
-                                ),
-                                child: Image.asset(
-                                  'assets/atrium.webp',
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              const ColoredBox(color: Color(0x5536291f)),
-                              Center(
-                                child: Container(
-                                  padding: const EdgeInsets.all(24),
-                                  decoration: BoxDecoration(
-                                    color: cream,
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  child: Icon(
-                                    icons[intro],
-                                    size: 54,
-                                    color: clay,
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: CampusPhoto(
+                            child: SizedBox(
+                              height: 222,
+                              width: double.infinity,
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Align(
+                                  alignment: AlignmentDirectional.bottomStart,
+                                  child: AnimatedSwitcher(
+                                    duration:
+                                        MediaQuery.disableAnimationsOf(context)
+                                        ? Duration.zero
+                                        : const Duration(milliseconds: 180),
+                                    child: ModuleIcon(
+                                      icons[intro],
+                                      key: ValueKey(intro),
+                                      color: espresso,
+                                      background: sand,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 24),
                         Text(
                           titles[intro],
-                          style: const TextStyle(
-                            fontSize: 38,
-                            fontWeight: FontWeight.w800,
-                            height: 1.08,
-                          ),
+                          style: displayType(arabic, size: 45),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -347,7 +382,9 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
                         children: List.generate(
                           titles.length,
                           (index) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
+                            duration: MediaQuery.disableAnimationsOf(context)
+                                ? Duration.zero
+                                : const Duration(milliseconds: 180),
                             margin: const EdgeInsetsDirectional.only(end: 6),
                             width: index == intro ? 26 : 8,
                             height: 8,
@@ -413,7 +450,7 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
       actions: [
         IconButton(
           tooltip: tr('Settings', 'الإعدادات'),
-          onPressed: () => setState(() => tab = 3),
+          onPressed: () => selectTab(3),
           icon: const Icon(Icons.settings_outlined),
         ),
         const SizedBox(width: 8),
@@ -426,7 +463,7 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
           constraints: const BoxConstraints(maxWidth: 780),
           child: ListView(
             key: PageStorageKey(tab),
-            padding: const EdgeInsetsDirectional.fromSTEB(18, 12, 18, 28),
+            padding: const EdgeInsetsDirectional.fromSTEB(18, 16, 18, 32),
             children: switch (tab) {
               0 => timetable(),
               1 => attendancePage(),
@@ -439,7 +476,7 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
     ),
     bottomNavigationBar: NavigationBar(
       selectedIndex: tab,
-      onDestinationSelected: (value) => setState(() => tab = value),
+      onDestinationSelected: selectTab,
       destinations: [
         NavigationDestination(
           icon: const Icon(Icons.calendar_view_week_outlined),
@@ -474,14 +511,7 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
               style: const TextStyle(color: clay, fontWeight: FontWeight.w700),
             ),
           ),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 34,
-            height: 1.12,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+        Text(title, style: displayType(arabic)),
       ],
     ),
   );
@@ -496,7 +526,7 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
       color: color,
       shape: RoundedRectangleBorder(
         side: const BorderSide(color: line),
-        borderRadius: BorderRadius.circular(19),
+        borderRadius: BorderRadius.circular(17),
       ),
       clipBehavior: Clip.antiAlias,
       child: Padding(padding: padding, child: content),
@@ -518,6 +548,7 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
         tr('Class schedule', 'جدولي الدراسي'),
         '${weekday(now.weekday)} · ${dateKey(now)}',
       ),
+      if (next != null) nextCard(next.lecture, next.starts),
       Padding(
         padding: const EdgeInsets.only(bottom: 16),
         child: Wrap(
@@ -546,7 +577,6 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
           padding: EdgeInsets.only(bottom: 12),
           child: LinearProgressIndicator(),
         ),
-      if (next != null) nextCard(next.lecture, next.starts),
       if (lectures.isEmpty)
         panel(
           Column(
@@ -624,22 +654,52 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
                   ),
                 ],
               ),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final day in [0, ...dayOrder])
-                      Padding(
-                        padding: const EdgeInsetsDirectional.only(end: 6),
-                        child: ChoiceChip(
-                          label: Text(
-                            day == 0 ? tr('Week', 'الأسبوع') : weekday(day),
+              Padding(
+                padding: const EdgeInsets.only(top: 5, bottom: 4),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final columns = constraints.maxWidth >= 520 ? 8 : 4;
+                    final width =
+                        (constraints.maxWidth - (columns - 1) * 6) / columns;
+                    return Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final day in [0, ...dayOrder])
+                          SizedBox(
+                            width: width,
+                            child: Tooltip(
+                              message: day == 0
+                                  ? tr('Week', 'الأسبوع')
+                                  : weekday(day),
+                              child: ChoiceChip(
+                                labelPadding: EdgeInsets.zero,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 3,
+                                ),
+                                label: Center(
+                                  child: Text(
+                                    day == 0
+                                        ? tr('Week', 'الأسبوع')
+                                        : arabic
+                                        ? weekday(day)
+                                        : weekday(day).substring(0, 3),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                selected: filter == day,
+                                onSelected: (_) => setState(() => filter = day),
+                              ),
+                            ),
                           ),
-                          selected: filter == day,
-                          onSelected: (_) => setState(() => filter = day),
-                        ),
-                      ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
               ),
               if (!lectures.any(
@@ -716,147 +776,131 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
             'بعد ${minutes ~/ 60} س ${minutes % 60} د',
           )
         : tr('In ${minutes ~/ 1440} days', 'بعد ${minutes ~/ 1440} يوم');
-    return panel(
-      ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Opacity(
-                opacity: .30,
-                child: ColorFiltered(
-                  colorFilter: const ColorFilter.mode(
-                    Color(0xffb18a70),
-                    BlendMode.color,
-                  ),
-                  child: Image.asset('assets/atrium.webp', fit: BoxFit.cover),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: AlignmentDirectional.centerStart,
-                    end: AlignmentDirectional.centerEnd,
-                    colors: const [oat, Color(0xccf5eee4), Color(0x00f5eee4)],
-                  ),
-                ),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(18),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: ColoredBox(
+          color: espresso,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              CampusPhoto(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      titleRow(
-                        Icons.upcoming_outlined,
-                        tr('Next class', 'المحاضرة القادمة'),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 7,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            tr('Next class', 'المحاضرة القادمة'),
+                            style: const TextStyle(
+                              color: sand,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: sand,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              child: Text(
+                                countdown,
+                                style: const TextStyle(
+                                  color: espresso,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 24),
                       Text(
                         lecture.name,
-                        style: const TextStyle(
-                          fontSize: 29,
-                          height: 1.12,
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: displayType(arabic, size: 36, color: cream),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       Wrap(
-                        spacing: 7,
+                        spacing: 8,
+                        runSpacing: 4,
                         children: [
                           Text(
                             dateKey(starts) == dateKey(now)
                                 ? tr('Today', 'اليوم')
                                 : weekday(starts.weekday),
-                            style: const TextStyle(color: muted),
+                            style: const TextStyle(color: sand),
                           ),
                           Text(
                             lecture.time,
                             textDirection: TextDirection.ltr,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: cream,
-                          border: Border.all(color: line),
-                          borderRadius: BorderRadius.circular(9),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          child: Text(
-                            countdown,
                             style: const TextStyle(
-                              color: clay,
+                              color: cream,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: Color(0xeefffdf8),
-                    border: Border(top: BorderSide(color: line)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: detail(
-                            Icons.place_outlined,
-                            tr('Room', 'القاعة'),
-                            lecture.room,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: detail(
-                            Icons.layers_outlined,
-                            tr('Floor', 'الطابق'),
-                            lecture.floor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              ),
+              const Divider(height: 1, color: Color(0x45f1d6b5)),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 15,
                 ),
-              ],
-            ),
-          ],
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: detail(
+                        Icons.place_outlined,
+                        tr('Room', 'القاعة'),
+                        lecture.room,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: detail(
+                        Icons.layers_outlined,
+                        tr('Floor', 'الطابق'),
+                        lecture.floor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      color: oat,
-      padding: EdgeInsets.zero,
     );
   }
 
   Widget detail(IconData icon, String label, String value) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Icon(icon, size: 18, color: clay),
-      const SizedBox(width: 6),
+      Icon(icon, size: 17, color: sand),
+      const SizedBox(width: 7),
       Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: muted)),
+            Text(label, style: const TextStyle(color: sand, fontSize: 12)),
             Text(
               value.isEmpty ? '—' : value,
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              style: const TextStyle(color: cream, fontWeight: FontWeight.w800),
             ),
           ],
         ),
@@ -897,35 +941,55 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
     ),
   );
 
-  Widget lectureTile(Lecture lecture, {bool active = false}) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    onTap: () => editLecture(lecture),
-    leading: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          timeLabel(lecture.start),
+  Widget lectureTile(Lecture lecture, {bool active = false}) => Padding(
+    padding: const EdgeInsets.only(top: 8),
+    child: Ink(
+      decoration: BoxDecoration(
+        color: active ? sage : cream,
+        border: Border.all(color: line),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        onTap: () => editLecture(lecture),
+        leading: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+          decoration: BoxDecoration(
+            color: oat,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                timeLabel(lecture.start),
+                style: const TextStyle(
+                  color: clay,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                timeLabel(lecture.end),
+                style: const TextStyle(color: muted, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+        title: Text(
+          lecture.name,
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
-        Text(
-          timeLabel(lecture.end),
-          style: const TextStyle(color: muted, fontSize: 12),
+        subtitle: Text(
+          [
+            if (active) tr('In progress', 'جارية الآن'),
+            if (lecture.room.isNotEmpty) lecture.room,
+            if (lecture.floor.isNotEmpty) lecture.floor,
+            lecture.lab ? tr('Lab', 'عملي') : tr('Lecture', 'نظري'),
+          ].join(' · '),
         ),
-      ],
+        trailing: const Icon(Icons.edit_outlined, size: 17, color: clay),
+      ),
     ),
-    title: Text(
-      lecture.name,
-      style: const TextStyle(fontWeight: FontWeight.w700),
-    ),
-    subtitle: Text(
-      [
-        if (active) tr('In progress', 'جارية الآن'),
-        if (lecture.room.isNotEmpty) lecture.room,
-        if (lecture.floor.isNotEmpty) lecture.floor,
-        lecture.lab ? tr('Lab', 'عملي') : tr('Lecture', 'نظري'),
-      ].join(' · '),
-    ),
-    trailing: const Icon(Icons.edit_outlined, size: 18, color: clay),
   );
 
   Future<void> editLecture([Lecture? existing]) async {
@@ -1316,27 +1380,60 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
     ];
     return [
       heading(tr('Attendance', 'الحضور'), tr('Class records', 'سجل المحاضرات')),
-      panel(
-        Row(
+      Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Row(
           children: [
-            for (var index = 0; index < codes.length; index++)
+            for (var index = 0; index < codes.length; index++) ...[
+              if (index != 0) const SizedBox(width: 7),
               Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      '${values.where((value) => value == codes[index]).length}',
-                      style: const TextStyle(
-                        fontSize: 25,
-                        fontWeight: FontWeight.w800,
-                      ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: [
+                      sage,
+                      const Color(0xfff1e1c0),
+                      const Color(0xffefd9ce),
+                    ][index],
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 14,
                     ),
-                    Text(labels[index], style: const TextStyle(color: muted)),
-                  ],
+                    child: Column(
+                      children: [
+                        Icon(
+                          [
+                            Icons.check_rounded,
+                            Icons.schedule,
+                            Icons.close_rounded,
+                          ][index],
+                          color: clay,
+                          size: 18,
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          '${values.where((value) => value == codes[index]).length}',
+                          style: displayType(arabic, size: 31),
+                        ),
+                        Text(
+                          labels[index],
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: muted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
+            ],
           ],
         ),
-        color: sage,
       ),
       panel(
         Column(
@@ -1419,10 +1516,13 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
     Future<void> Function()? run,
   ) => ListTile(
     contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-    leading: Icon(icon, color: clay),
+    leading: ModuleIcon(icon),
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
     subtitle: Text(subtitle),
-    trailing: const Icon(Icons.chevron_right),
+    trailing: Icon(
+      arabic ? Icons.chevron_left : Icons.chevron_right,
+      color: clay,
+    ),
     enabled: run != null,
     onTap: run,
   );
@@ -1433,36 +1533,34 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
       tr('Take your timetable with you', 'احتفظ بجدولك معك'),
     ),
     panel(
-      Column(
-        children: [
-          action(
-            Icons.event_available_outlined,
-            tr('Calendar file', 'ملف التقويم'),
-            tr(
-              'Share a recurring .ics schedule',
-              'مشاركة جدول متكرر بصيغة .ics',
-            ),
-            lectures.isEmpty ? null : shareCalendar,
-          ),
-          const Divider(),
-          action(
-            Icons.share_outlined,
-            tr('Share timetable', 'مشاركة الجدول'),
-            tr('Send your week as readable text', 'أرسل جدول الأسبوع كنص'),
-            lectures.isEmpty ? null : shareTimetable,
-          ),
-          const Divider(),
-          action(
-            Icons.download_outlined,
-            tr('Back up data', 'نسخ احتياطي'),
-            tr(
-              'Export classes and attendance to JSON',
-              'تصدير المحاضرات والحضور إلى JSON',
-            ),
-            shareBackup,
-          ),
-        ],
+      action(
+        Icons.event_available_outlined,
+        tr('Calendar file', 'ملف التقويم'),
+        tr('Share a recurring .ics schedule', 'مشاركة جدول متكرر بصيغة .ics'),
+        lectures.isEmpty ? null : shareCalendar,
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+    ),
+    panel(
+      action(
+        Icons.share_outlined,
+        tr('Share timetable', 'مشاركة الجدول'),
+        tr('Send your week as readable text', 'أرسل جدول الأسبوع كنص'),
+        lectures.isEmpty ? null : shareTimetable,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+    ),
+    panel(
+      action(
+        Icons.download_outlined,
+        tr('Back up data', 'نسخ احتياطي'),
+        tr(
+          'Export classes and attendance to JSON',
+          'تصدير المحاضرات والحضور إلى JSON',
+        ),
+        shareBackup,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
     ),
   ];
 
