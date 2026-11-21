@@ -40,7 +40,7 @@ const outputSchema = z.object({
 const singleImageSchema = outputSchema.pick({ sessions: true, issues: true });
 
 const inputSchema = z.object({
-  images: z.array(z.string().regex(/^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/))
+  images: z.array(z.string().regex(/^data:image\/(?:jpeg|png);base64,[A-Za-z0-9+/]+=*$/))
     .min(1).max(MAX_VISION_SCREENS),
 });
 
@@ -149,12 +149,11 @@ async function readInput(req: IncomingMessage & { body?: unknown }): Promise<unk
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
-export default async function handler(req: IncomingMessage & { body?: unknown }, res: ServerResponse) {
+export default async function handler(req: IncomingMessage & { body?: unknown }, res: ServerResponse, apiKey = process.env.AI_GATEWAY_API_KEY?.trim()) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return respond(res, 405, { error: 'طريقة الطلب غير مدعومة.' });
   }
-  const apiKey = process.env.AI_GATEWAY_API_KEY?.trim();
   if (!apiKey) {
     return respond(res, 503, { error: 'قارئ الصور غير مهيّأ حالياً. جرّب لاحقاً.' });
   }
@@ -177,7 +176,7 @@ export default async function handler(req: IncomingMessage & { body?: unknown },
       { type: 'text', text: 'Extract the meetings from these timetable images.' },
       ...body.images.flatMap((image, index) => [
         { type: 'text' as const, text: `Image ${index + 1} of ${body.images.length}:` },
-        { type: 'image' as const, image: Buffer.from(image.split(',')[1], 'base64'), mediaType: 'image/jpeg' },
+        { type: 'image' as const, image: Buffer.from(image.split(',')[1], 'base64'), mediaType: image.startsWith('data:image/png;') ? 'image/png' : 'image/jpeg' },
       ]),
     ] }];
     const output = body.images.length === 1
