@@ -5,9 +5,23 @@ import "package:flutter/material.dart";
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jadwali/main.dart';
 import 'package:jadwali/schedule.dart';
+import 'package:jadwali/scanner_endpoint.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  test('routes scans to Supabase and keeps its key off custom origins', () {
+    final builtIn = ScannerEndpoint.resolve('', publicKey: 'public-key');
+    expect(builtIn?.url.path, '/functions/v1/jadwali-vision');
+    expect(builtIn?.publicKey, 'public-key');
+    final custom = ScannerEndpoint.resolve(
+      'https://example.org',
+      publicKey: 'public-key',
+    );
+    expect(custom?.url.toString(), 'https://example.org/api/vision');
+    expect(custom?.publicKey, isNull);
+    expect(ScannerEndpoint.resolve('', publicKey: ''), isNull);
+  });
+
   test(
     'past meetings recur and calendar export respects the selected range',
     () {

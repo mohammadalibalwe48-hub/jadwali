@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'schedule.dart';
+import 'scanner_endpoint.dart';
 
 const ink = Color(0xff32291f);
 const clay = Color(0xff8b4c3b);
@@ -47,6 +48,8 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
   bool scanning = false, table = false;
 
   String tr(String en, String ar) => arabic ? ar : en;
+  ScannerEndpoint? get scannerEndpoint => ScannerEndpoint.resolve(scanner);
+
   String weekday(int day) => (arabic ? arabicDays : englishDays)[day - 1];
   BuildContext get contextForDialog => navigator.currentState!.overlay!.context;
   SharedPreferences get prefs => widget.preferences;
@@ -999,7 +1002,7 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
     try {
       final recovered = await picker.retrieveLostData();
       if (recovered.files case final files?
-          when mounted && files.isNotEmpty && scanner.isNotEmpty) {
+          when mounted && files.isNotEmpty && scannerEndpoint != null) {
         await confirmScan(files);
       }
     } catch (_) {
@@ -1015,9 +1018,9 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
   }
 
   Future<void> importImages() async {
-    if (scanner.isEmpty) {
+    if (scannerEndpoint == null) {
       await editScanner();
-      if (!mounted || scanner.isEmpty) return;
+      if (!mounted || scannerEndpoint == null) return;
     }
     final source = await showModalBottomSheet<ImageSource>(
       context: contextForDialog,
@@ -1069,16 +1072,19 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
   }
 
   Future<void> confirmScan(List<XFile> files) async {
+    final endpoint = scannerEndpoint;
+    if (endpoint == null) return;
+    final host = endpoint.url.host;
     final agreed = await confirm(
       tr(
-        'Send ${files.length} image(s) to $scanner for scanning?',
-        'إرسال ${files.length} صورة إلى $scanner لقراءتها؟',
+        'Send ${files.length} image(s) to $host for AI scanning?',
+        'إرسال ${files.length} صورة إلى $host لقراءتها بالذكاء الاصطناعي؟',
       ),
     );
-    if (agreed && mounted) await scan(files);
+    if (agreed && mounted) await scan(files, endpoint);
   }
 
-  Future<void> scan(List<XFile> files) async {
+  Future<void> scan(List<XFile> files, ScannerEndpoint endpoint) async {
     if (scanning) return;
     setState(() => scanning = true);
     final client = HttpClient()
@@ -1105,15 +1111,27 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
           'data:image/$kind;base64,${base64Encode(await file.readAsBytes())}',
         );
       }
-      final request = await client.postUrl(
-        Uri.parse(scanner).resolve('/api/vision'),
-      );
+      final request = await client.postUrl(endpoint.url);
+      if (endpoint.publicKey case final key?) {
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $key');
+      }
       request.followRedirects = false;
       request.headers.contentType = ContentType.json;
       request.write(jsonEncode({'images': images}));
       final response = await request.close().timeout(
-        const Duration(seconds: 75),
+        const Duration(seconds: 105),
       );
+      if (response.statusCode == 429) {
+        if (mounted) {
+          notice(
+            tr(
+              'The scanner limit was reached. Try again later.',
+              'تم بلوغ حدّ المسح. جرّب لاحقاً.',
+            ),
+          );
+        }
+        return;
+      }
       if (response.statusCode != 200) {
         throw const HttpException('Scanner rejected the request');
       }
@@ -1243,8 +1261,8 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
           children: [
             Text(
               tr(
-                'Enter the HTTPS address of your Jadwali website with image scanning enabled.',
-                'أدخل عنوان HTTPS لموقع جدولي المفعّل فيه مسح الصور.',
+                'Leave this blank to use Jadwali’s built-in scanner, or enter your own Jadwali website’s HTTPS address.',
+                'اترك الحقل فارغاً لاستخدام الماسح المدمج أو أدخل عنوان HTTPS لموقع جدولي الخاص بك.',
               ),
             ),
             const SizedBox(height: 12),
@@ -1463,9 +1481,11 @@ class _JadwaliState extends State<Jadwali> with WidgetsBindingObserver {
           action(
             Icons.document_scanner_outlined,
             tr('Screenshot scanner', 'ماسح صور الجدول'),
-            scanner.isEmpty
-                ? tr('Connect your Jadwali website', 'اربط موقع جدولي')
-                : scanner,
+            scanner.isNotEmpty
+                ? scanner
+                : scannerEndpoint != null
+                ? tr('Connected through Supabase', 'متصل عبر Supabase')
+                : tr('Connect your Jadwali website', 'اربط موقع جدولي'),
             editScanner,
           ),
           const Divider(),
