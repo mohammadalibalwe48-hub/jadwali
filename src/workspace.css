@@ -162,18 +162,28 @@
 .next-class {
   --card-padding: clamp(16px, 3vw, 24px);
   --card-gradient: to right;
+  position: relative;
+  isolation: isolate;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid #494075;
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background:
-    linear-gradient(var(--card-gradient), #20183f 28%, #2e2257f5 55%, #493587b8),
-    url('/brand/atrium.webp') center 58% / cover no-repeat,
-    #2e2257;
-  color: #fff;
-  box-shadow: 0 8px 20px #2b1e4a26;
+  background: var(--soft);
+  color: var(--ink);
+  box-shadow: var(--elevation);
 }
 .next-class:dir(rtl) { --card-gradient: to left; }
+.next-class::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background: url('/brand/atrium.webp') center 58% / cover no-repeat;
+  filter: grayscale(1) sepia(.75);
+  opacity: .37;
+  mask-image: linear-gradient(var(--card-gradient), transparent 32%, #000 100%);
+}
 .next-class-main { padding: var(--card-padding); }
 .next-class h2, .next-class-details dt, .next-class-countdown {
   display: flex;
@@ -181,7 +191,7 @@
   gap: 7px;
 }
 .next-class svg { flex: none; }
-.next-class h2 { color: #ece5ff; font-size: 14px; font-weight: 600; }
+.next-class h2 { color: var(--brand); font-size: 14px; font-weight: 600; }
 .next-class-subject {
   margin-block-start: 8px;
   font-size: clamp(26px, 4vw, 36px);
@@ -196,7 +206,7 @@
   gap: 2px 9px;
   margin-block-start: 6px;
   font-size: 14px;
-  color: #ece5ff;
+  color: var(--muted);
 }
 .next-class-time bdi { font-weight: 600; font-variant-numeric: tabular-nums; }
 .next-class-countdown {
@@ -204,9 +214,10 @@
   max-width: 100%;
   margin-block-start: 14px;
   padding: 5px 9px;
-  border: 1px solid #ffffff40;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: #ffffff16;
+  background: var(--surface);
+  color: var(--brand);
   font-size: 13px;
   font-weight: 600;
   overflow-wrap: anywhere;
@@ -215,15 +226,15 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 12px var(--card-padding) 14px;
-  border-block-start: 1px solid #ffffff35;
-  background: #20183f55;
+  border-block-start: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
 }
 .next-class-details > div + div {
   padding-inline-start: 14px;
-  border-inline-start: 1px solid #ffffff35;
+  border-inline-start: 1px solid var(--line);
 }
 .next-class-details > div:first-child { padding-inline-end: 14px; }
-.next-class-details dt { color: #ece5ff; font-size: 13px; }
+.next-class-details dt { color: var(--muted); font-size: 13px; }
 .next-class-details dd {
   margin-block-start: 2px;
   font-size: 17px;
